@@ -1,7 +1,6 @@
 {
   "name": "sudanship-bots",
   "version": "1.0.0",
-  "description": "Multi-bot runner for Discord",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
