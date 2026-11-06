@@ -1,12 +1,18 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 
+// استدعاء التوكنات من متغيرات البيئة السرية بأمان
 const tokens = [
-  "MTU2ODEwOTAxOdgynJgwNTMyMg.GJPEsp.oC4suJh63k0XPXI__9SoArq046yFGFx7seeH7c", // أركويت
-  "MTU2ODewODVMTk0MzU2NzkmM5Ng.Gin9g_.zmHEceG7CbPg1j0mwfXluafoOuu5-jrCBGKE", // شرق النيل
-  "MTU2ODEwNnA3NjK0NjMwMk1mA.GaUbAi.ECOvDzomnq1Qx90BUHwZtESbzgwaAgRsLnefe0", // الكلاكلة
-  "MTU2NzQ0MzUyNzIzNzkwMjQwQ.GH76R0.-_DQz1ph4FDBeAmPzir7knc6Ccmj8PF7-FYc78", // بحري
-  "MTU2ODEwNTMTY0OTcC0MjkxOQ.Gm-3I2.hLRtb8rzBHe6KbcbqUhc2mXPUDIYY-Z-6NHbzc"  // أمدرمان
-];
+  process.env.TOKEN_1,
+  process.env.TOKEN_2,
+  process.env.TOKEN_3,
+  process.env.TOKEN_4,
+  process.env.TOKEN_5
+].filter(Boolean); // لتصفية أي توكن فارغ
+
+if (tokens.length === 0) {
+  console.error("[❌] No tokens found in environment variables!");
+  process.exit(1);
+}
 
 tokens.forEach((token, index) => {
   const client = new Client({
