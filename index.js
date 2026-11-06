@@ -1,20 +1,14 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 
-// قراءة التوكنات بشكل آمن ومشفر من متغيرات البيئة
 const tokens = [
-  process.env.TOKEN_1, // شرق النيل
-  process.env.TOKEN_2, // أركويت
-  process.env.TOKEN_3, // الكلاكلة
-  process.env.TOKEN_4, // بحري
-  process.env.TOKEN_5  // أمدرمان
+  "MTU2ODEwOTAxOdgynJgwNTMyMg.GJPEsp.oC4suJh63k0XPXI__9SoArq046yFGFx7seeH7c", // أركويت
+  "MTU2ODewODVMTk0MzU2NzkmM5Ng.Gin9g_.zmHEceG7CbPg1j0mwfXluafoOuu5-jrCBGKE", // شرق النيل
+  "MTU2ODEwNnA3NjK0NjMwMk1mA.GaUbAi.ECOvDzomnq1Qx90BUHwZtESbzgwaAgRsLnefe0", // الكلاكلة
+  "MTU2NzQ0MzUyNzIzNzkwMjQwQ.GH76R0.-_DQz1ph4FDBeAmPzir7knc6Ccmj8PF7-FYc78", // بحري
+  "MTU2ODEwNTMTY0OTcC0MjkxOQ.Gm-3I2.hLRtb8rzBHe6KbcbqUhc2mXPUDIYY-Z-6NHbzc"  // أمدرمان
 ];
 
 tokens.forEach((token, index) => {
-  if (!token) {
-    console.log(`[!] Token ${index + 1} is missing!`);
-    return;
-  }
-
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
