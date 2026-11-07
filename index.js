@@ -12,6 +12,7 @@ const botsData = [
 const startBot = (botInfo, index) => {
   const botNum = index + 1;
 
+  // زيادة الفاصل الزمني إلى 7 ثوانٍ بين كل بوت والثاني لمنع تداخل اتصالات الصوت
   setTimeout(() => {
     const client = new Client({
       intents: [
@@ -30,30 +31,32 @@ const startBot = (botInfo, index) => {
         status: 'online',
       });
 
-      // محاولة الانضمام للروم المحدد تلقائياً
-      try {
-        const channel = await c.channels.fetch(botInfo.channelId);
-        if (channel && channel.isVoiceBased()) {
-          joinVoiceChannel({
-            channelId: channel.id,
-            guildId: channel.guild.id,
-            adapterCreator: channel.guild.voiceAdapterCreator,
-            selfDeaf: true,
-            selfMute: false
-          });
-          console.log(`[🔊] Bot ${botNum} (${botInfo.name}) joined assigned voice channel: ${channel.name}`);
-        } else {
-          console.log(`[❌] Bot ${botNum} could not find voice channel: ${botInfo.channelId}`);
+      // تأخير بسيط إضافي قبل دخول الروم الصوتي الخاص بكل بوت
+      setTimeout(async () => {
+        try {
+          const channel = await c.channels.fetch(botInfo.channelId);
+          if (channel && channel.isVoiceBased()) {
+            joinVoiceChannel({
+              channelId: channel.id,
+              guildId: channel.guild.id,
+              adapterCreator: channel.guild.voiceAdapterCreator,
+              selfDeaf: true,
+              selfMute: false
+            });
+            console.log(`[🔊] Bot ${botNum} (${botInfo.name}) successfully joined voice channel: ${channel.name}`);
+          } else {
+            console.log(`[❌] Bot ${botNum} could not find voice channel: ${botInfo.channelId}`);
+          }
+        } catch (err) {
+          console.error(`[❌] Bot ${botNum} voice join error:`, err.message);
         }
-      } catch (err) {
-        console.error(`[❌] Bot ${botNum} voice join error:`, err.message);
-      }
+      }, 3000);
     });
 
     client.login(botInfo.token).catch(err => {
       console.error(`[❌] Bot ${botNum} login failed:`, err.message);
     });
-  }, index * 4000); // 4 ثوانٍ فاصل زمني بين دخول كل بوت والثاني
+  }, index * 7000);
 };
 
 botsData.forEach((bot, idx) => startBot(bot, idx));
