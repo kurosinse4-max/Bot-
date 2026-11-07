@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActivityType, Events } = require('discord.js');
+const { Client, GatewayIntentBits, ActivityType, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { joinVoiceChannel } = require('@discordjs/voice');
 
 const botsData = [
@@ -24,13 +24,12 @@ const startBot = (botInfo, index) => {
     });
 
     client.once(Events.ClientReady, async (c) => {
-      console.log(`[✔] Bot ${botNum} (${botInfo.name}) is online as ${c.user.tag}`);
+      console.log(`[✔] Bot ${botNum} (${botInfo.name}) is online.`);
       c.user.setPresence({
         activities: [{ name: botInfo.status, type: ActivityType.Listening }],
         status: 'online',
       });
 
-      // الدخول التلقائي والثابت للروم الخاص بكل بوت
       setTimeout(async () => {
         try {
           const channel = await c.channels.fetch(botInfo.channelId);
@@ -43,15 +42,14 @@ const startBot = (botInfo, index) => {
               selfMute: false,
               group: `bot_${botNum}`
             });
-            console.log(`[🔊] Bot ${botNum} (${botInfo.name}) locked into room: ${channel.name}`);
+            console.log(`[🔊] Bot ${botNum} (${botInfo.name}) joined voice.`);
           }
         } catch (err) {
-          console.error(`[❌] Bot ${botNum} voice join error:`, err.message);
+          console.error(`[❌] Voice join error for bot ${botNum}:`, err.message);
         }
       }, 4000);
     });
 
-    // حماية صارمة ضد الطرد: لو أي شخص حاول يخرج البوت، يعود فوراً مكانه
     client.on(Events.VoiceStateUpdate, (oldState, newState) => {
       if (newState.member?.id === client.user.id && !newState.channelId) {
         setTimeout(async () => {
@@ -69,6 +67,52 @@ const startBot = (botInfo, index) => {
             }
           } catch (e) {}
         }, 500);
+      }
+    });
+
+    client.on(Events.MessageCreate, async (message) => {
+      if (message.author.bot) return;
+
+      const content = message.content.trim().toLowerCase();
+
+      if (content === `!panel${botNum}` || content === '!panel') {
+        const embed = new EmbedBuilder()
+          .setColor(0x2f3136)
+          .setTitle(`🎶 • ${botInfo.name} • Music Dashboard`)
+          .setDescription(`• أهلاً بك يا مهند في لوحة تحكم **${botInfo.name}** الثابتة.\n• البوت متواجد في رومته ومحمي 24/7.`)
+          .addFields(
+            { name: 'حالة البوت', value: '🟢 متصل وثابت في الروم الصوتي', inline: true },
+            { name: 'الأمان', value: '🛡️ مفعل (ممنوع الطرد)', inline: true }
+          )
+          .setFooter({ text: `Elara • Music System` });
+
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`status_btn_${botNum}`)
+            .setLabel('حالة البوت')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('⚡'),
+          new ButtonBuilder()
+            .setCustomId(`ping_btn_${botNum}`)
+            .setLabel('سرعة الاستجابة')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🏓')
+        );
+
+        return message.reply({ embeds: [embed], components: [row] });
+      }
+    });
+
+    client.on(Events.InteractionCreate, async (interaction) => {
+      if (!interaction.isButton()) return;
+
+      if (interaction.customId === `status_btn_${botNum}`) {
+        await interaction.reply({ content: `✅ بوت **${botInfo.name}** شغال 100% وثابت في رومته الصوتي وجاهز!`, ephemeral: true });
+      }
+
+      if (interaction.customId === `ping_btn_${botNum}`) {
+        const ping = client.ws.ping;
+        await interaction.reply({ content: `🏓 سرعة استجابة بوت **${botInfo.name}** هي: \`${ping}ms\``, ephemeral: true });
       }
     });
 
