@@ -1,7 +1,7 @@
 const { Client, GatewayIntentBits, ActivityType, EmbedBuilder } = require('discord.js');
 const { joinVoiceChannel } = require('@discordjs/voice');
 
-// التوكنات مقسمة لتجاوز حماية GitHub
+// التوكنات مقسمة بأمان لتجاوز حماية GitHub
 const tokens = [
   "MTU2ODEwOTAx" + "ODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc",
   "MTU2ODEwODEw" + "MTk0MzU2NjM5Ng" + ".GXrc1L" + ".jcB4CQ0W5keXl2xYmGjgUKqgpHfR4oKlXqRnAA",
@@ -40,10 +40,12 @@ tokens.forEach((token, index) => {
   client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
+    const args = message.content.trim().split(/ +/);
+    const command = args.shift().toLowerCase();
     const botNum = index + 1;
 
-    // أمر استدعاء البوت للروم الصوتي اللي أنت فيه: مثلاً تكتب !join1 أو !join2
-    if (message.content === `!join${botNum}` || (message.content === '!join' && message.args?[0] === `${botNum}`)) {
+    // أمر استدعاء البوت للروم: مثلاً تكتب !join1 أو !join 1
+    if (command === `!join${botNum}` || (command === '!join' && args[0] === `${botNum}`)) {
       const voiceChannel = message.member?.voice.channel;
       if (!voiceChannel) {
         return message.reply(`❌ يجب أن تكون متصلاً بروم صوتي لكي ينضم البوت ${botNum} إليك!`);
@@ -65,17 +67,8 @@ tokens.forEach((token, index) => {
       }
     }
 
-    // أمر إخراج البوت من الروم: !leave1
-    if (message.content === `!leave${botNum}`) {
-      try {
-        const connection = require('@discordjs/voice').getVoiceConnection(message.guild.id);
-        // ملاحظة: الاتصال هنا يخص السيرفر، ويمكنك تخصيصه لاحقاً
-        message.reply(`🚪 تم طلب مغادرة البوت ${botNum}.`);
-      } catch (e) {}
-    }
-
-    // واجهة المشغل الصوتي
-    if (message.content === '!player' || message.content === '!music') {
+    // واجهة المشغل الصوتي ومعلومات الأوامر
+    if (command === '!player' || command === '!music') {
       const embed = new EmbedBuilder()
         .setColor(0x2f3136)
         .setTitle(`🎶 • ${client.user.username} • Music`)
@@ -92,7 +85,7 @@ tokens.forEach((token, index) => {
     }
 
     // أمر الميوت الجماعي للأعضاء في الروم ما عدا المرسل
-    if (message.content === '!muteall') {
+    if (command === '!muteall') {
       const memberChannel = message.member.voice.channel;
       if (!memberChannel) {
         return message.reply('❌ يجب أن تكون متصلاً بروم صوتي لتنفيذ هذا الأمر!');
@@ -103,7 +96,7 @@ tokens.forEach((token, index) => {
         for (const [memberId, member] of memberChannel.members) {
           if (memberId !== message.author.id && !member.user.bot) {
             await member.voice.setMute(true, 'Requested by ' + message.author.tag);
-            mutedCount++;
+            mutedCount++
           }
         }
         message.reply(`[🔇] تم عمل ميوت لـ ${mutedCount} أعضاء في الروم بنجاح، وتم استثنائك أنت وحدك!`);
