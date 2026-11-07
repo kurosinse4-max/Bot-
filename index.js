@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActivityType, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, ActivityType, EmbedBuilder, Events } = require('discord.js');
 const { joinVoiceChannel } = require('@discordjs/voice');
 
 const botsData = [
@@ -11,7 +11,7 @@ const botsData = [
 
 botsData.forEach((botInfo, index) => {
   const botNum = index + 1;
-  
+
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -22,20 +22,21 @@ botsData.forEach((botInfo, index) => {
     ]
   });
 
-  client.once('ready', () => {
-    console.log(`[✔] Bot ${botNum} (${botInfo.name}) is online as ${client.user.tag}`);
-    client.user.setPresence({
+  // استخدام الحدث الصحيح والمستقر لـ Discord.js v14
+  client.once(Events.ClientReady, (c) => {
+    console.log(`[✔] Bot ${botNum} (${botInfo.name}) is online as ${c.user.tag}`);
+    c.user.setPresence({
       activities: [{ name: botInfo.status, type: ActivityType.Listening }],
       status: 'online',
     });
   });
 
-  client.on('messageCreate', async (message) => {
+  client.on(Events.MessageCreate, async (message) => {
     if (message.author.bot) return;
 
     const content = message.content.trim().toLowerCase();
 
-    // أمر الانضمام الخاص بهذا البوت فقط: !join1, !join2, etc.
+    // أمر الانضمام الخاص بكل بوت على حدة: !join1, !join2, !join3, !join4, !join5
     if (content === `!join${botNum}`) {
       const voiceChannel = message.member?.voice.channel;
       if (!voiceChannel) {
@@ -58,7 +59,7 @@ botsData.forEach((botInfo, index) => {
       }
     }
 
-    // أمر المشغل الصوتي الخاص بهذا البوت
+    // أمر المشغل الصوتي
     if (content === `!player${botNum}` || content === '!player') {
       const embed = new EmbedBuilder()
         .setColor(0x2f3136)
@@ -98,7 +99,10 @@ botsData.forEach((botInfo, index) => {
     }
   });
 
-  client.login(botInfo.token).catch(err => {
-    console.error(`[❌] Bot ${botNum} (${botInfo.name}) login failed:`, err.message);
-  });
+  // تسجيل الدخول بفاصل زمني (3 ثوانٍ بين كل بوت والثاني) لتفادي حظر ديسكورد وضمان اشتغال الـ 5 معاً
+  setTimeout(() => {
+    client.login(botInfo.token).catch(err => {
+      console.error(`[❌] Bot ${botNum} (${botInfo.name}) login failed:`, err.message);
+    });
+  }, index * 3000);
 });
