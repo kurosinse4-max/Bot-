@@ -7,7 +7,6 @@
   },
   "dependencies": {
     "discord.js": "^14.14.0",
-    "@discordjs/voice": "^0.17.0",
-    "play-dl": "^1.9.7"
+    "@discordjs/voice": "^0.17.0"
   }
 }
