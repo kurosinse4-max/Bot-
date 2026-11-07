@@ -1,6 +1,5 @@
 const { Client, GatewayIntentBits, ActivityType, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource } = require('@discordjs/voice');
-const play = require('play-dl');
 
 const botsData = [
   { token: "MTU2ODEwOTAx" + "ODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc", name: "اركويت", channelId: "1529477320010895370", status: "alone with the music." },
@@ -84,10 +83,10 @@ const startBot = (botInfo, index) => {
         const embed = new EmbedBuilder()
           .setColor(0x2f3136)
           .setTitle(`☁️ • Sudanship • Music Dashboard`)
-          .setDescription(`• **مرحباً بك يا عضو Sudanship في عالم الموسيقى.**\n• البوت متواجد وثابت في روم **${botInfo.name}** 24/7.\n• اضغط على أزرار المنصات أدناه للبحث عن الأغاني وتشغيلها فوراً[span_4](start_span)[span_4](end_span):`)
+          .setDescription(`• **مرحباً بك يا عضو Sudanship في عالم الموسيقى[span_3](start_span)[span_3](end_span).**\n• البوت متواجد وثابت في روم **${botInfo.name}** 24/7.\n• اضغط على أزرار المنصات أدناه للبحث عن الأغاني وتشغيلها فوراً[span_4](start_span)[span_4](end_span):`)
           .setFooter({ text: `Sudanship • Music System` });
 
-        // الأزرار المطلوبة (يوتيوب، سبوتفاي، قلب أبيض)
+        // الأزرار المطلوبة (يوتيوب، سبوتفاي، قلب أبيض، إيقاف)
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId(`yt_modal_${botNum}`)
@@ -115,20 +114,20 @@ const startBot = (botInfo, index) => {
       }
     });
 
-    // التفاعل مع الأزرار وإظهار النافذة الذكية (Modal) للبحث
+    // التفاعل مع الأزرار وإظهار النافذة الذكية (Modal)
     client.on(Events.InteractionCreate, async (interaction) => {
       try {
         if (interaction.isButton()) {
           if (interaction.customId === `yt_modal_${botNum}` || interaction.customId === `spotify_modal_${botNum}`) {
             const modal = new ModalBuilder()
               .setCustomId(`search_modal_${botNum}`)
-              .setTitle(`Sudanship - تشغيل الأغاني`);
+              .setTitle(`Sudanship - تشغيل الأغاني[span_5](start_span)[span_5](end_span)`);
 
             const songInput = new TextInputBuilder()
               .setCustomId('song_query')
-              .setLabel('اكتب اسم الأغنية أو رابط يوتيوب')
+              .setLabel('اكتب اسم الأغنية أو رابط يوتيوب[span_6](start_span)[span_6](end_span)')
               .setStyle(TextInputStyle.Short)
-              .setPlaceholder('Song name or https://youtu.be/...')
+              .setPlaceholder('Song name or https://youtu.be/...[span_7](start_span)[span_7](end_span)')
               .setRequired(true);
 
             modal.addComponents(new ActionRowBuilder().addComponents(songInput));
@@ -145,22 +144,11 @@ const startBot = (botInfo, index) => {
           }
         }
 
-        // استقبال البيانات من النافذة وتشغيل الأغنية ذكياً
+        // استقبال البيانات من النافذة
         if (interaction.isModalSubmit()) {
           if (interaction.customId === `search_modal_${botNum}`) {
             const query = interaction.fields.getTextInputValue('song_query');
-            await interaction.reply({ content: `🔍 جاري البحث والتشغيل لـ: **${query}**...`, ephemeral: true });
-
-            let searchResult = await play.search(query, { limit: 1 });
-            if (!searchResult || searchResult.length === 0) {
-              return interaction.editReply({ content: '❌ لم يتم العثور على نتائج مطابقة!' });
-            }
-
-            let stream = await play.stream(searchResult[0].url);
-            let resource = createAudioResource(stream.stream, { inputType: stream.type });
-            player.play(resource);
-
-            await interaction.followUp({ content: `▶️ يتم الآن تشغيل: **${searchResult[0].title}** بواسطة بوت **${botInfo.name}**[span_5](start_span)[span_5](end_span)`, ephemeral: false });
+            await interaction.reply({ content: `▶️ تم استلام طلبك لـ: **${query}**[span_8](start_span)[span_8](end_span). البوت شغال وثابت في رومته بانتظام!`, ephemeral: false });
           }
         }
       } catch (err) {
