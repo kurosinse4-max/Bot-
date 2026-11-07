@@ -1,12 +1,13 @@
 const { Client, GatewayIntentBits, ActivityType, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
+const play = require('play-dl');
 
 const botsData = [
-  { token: "MTU2ODEwOTAx" + "ODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc", name: "اركويت", channelId: "1529477320010895370", status: "Sudanship Music 24/7" },
-  { token: "MTU2ODEwODEw" + "MTk0MzU2NjM5Ng" + ".GXrc1L" + ".jcB4CQ0W5keXl2xYmGjgUKqgpHfR4oKlXqRnAA", name: "بحري", channelId: "1530676107408445450", status: "Sudanship Vibes" },
-  { token: "MTU2ODEwNjA3" + "Njk0NjMwMDk1MA" + ".GeS2Ay" + ".beAQzt5Xi9Od7mV-Ft6oma_rZyAkbBHDjO3cU8", name: "الكلاكلة", channelId: "1530673230678069309", status: "Elara Beats" },
-  { token: "MTU2NzQ0MzUy" + "NzIzNzkwMjQw" + "OQ.GjBD19" + ".bR2YRod6ztOW7-zeJ-2PFiNtx0II8F-F6uWGFY", name: "امدرمان", channelId: "1530676230335238336", status: "Gaming & Chill" },
-  { token: "MTU2ODEwNTc5" + "MTY0OTc0MjkxOQ" + ".GRlWpY" + ".MNjtMD8bVVND4cQ24mwhPIX6SU-3BPwF7KnflE", name: "شرق النيل", channelId: "1539695465568796672", status: "Active Stream" }
+  { token: "MTU2ODEwOTAx" + "ODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc", channelId: "1529477320010895370", status: "Sudanship Music 24/7" },
+  { token: "MTU2ODEwODEw" + "MTk0MzU2NjM5Ng" + ".GXrc1L" + ".jcB4CQ0W5keXl2xYmGjgUKqgpHfR4oKlXqRnAA", channelId: "1530676107408445450", status: "Sudanship Vibes" },
+  { token: "MTU2ODEwNjA3" + "Njk0NjMwMDk1MA" + ".GeS2Ay" + ".beAQzt5Xi9Od7mV-Ft6oma_rZyAkbBHDjO3cU8", channelId: "1530673230678069309", status: "Sudanship Beats" },
+  { token: "MTU2NzQ0MzUy" + "NzIzNzkwMjQw" + "OQ.GjBD19" + ".bR2YRod6ztOW7-zeJ-2PFiNtx0II8F-F6uWGFY", channelId: "1530676230335238336", status: "Sudanship Chill" },
+  { token: "MTU2ODEwNTc5" + "MTY0OTc0MjkxOQ" + ".GRlWpY" + ".MNjtMD8bVVND4cQ24mwhPIX6SU-3BPwF7KnflE", channelId: "1539695465568796672", status: "Sudanship Stream" }
 ];
 
 botsData.forEach((botInfo, index) => {
@@ -27,7 +28,7 @@ botsData.forEach((botInfo, index) => {
     const player = createAudioPlayer();
 
     client.once(Events.ClientReady, async (c) => {
-      console.log(`[✔] Bot ${botNum} (${botInfo.name}) is online.`);
+      console.log(`[✔] Sudanship Bot ${botNum} is online.`);
       c.user.setPresence({
         activities: [{ name: botInfo.status, type: ActivityType.Listening }],
         status: 'online',
@@ -43,16 +44,15 @@ botsData.forEach((botInfo, index) => {
               adapterCreator: channel.guild.voiceAdapterCreator,
               selfDeaf: true,
               selfMute: false,
-              group: `bot_${botNum}`
+              group: `sudanship_${botNum}`
             });
             currentConnection.subscribe(player);
-            console.log(`[🔊] Bot ${botNum} locked into room.`);
           }
         } catch (err) {}
       }, 4000);
     });
 
-    // حماية صارمة ضد الطرد أو التحريك
+    // حماية تامة ضد الطرد أو التحريك
     client.on(Events.VoiceStateUpdate, (oldState, newState) => {
       if (newState.member?.id === client.user.id && !newState.channelId) {
         setTimeout(async () => {
@@ -65,7 +65,7 @@ botsData.forEach((botInfo, index) => {
                 adapterCreator: channel.guild.voiceAdapterCreator,
                 selfDeaf: true,
                 selfMute: false,
-                group: `bot_${botNum}`
+                group: `sudanship_${botNum}`
               });
               currentConnection.subscribe(player);
             }
@@ -74,17 +74,17 @@ botsData.forEach((botInfo, index) => {
       }
     });
 
-    // إرسال لوحة التحكم الفخمة بالأمر !panel
+    // إرسال لوحة التحكم الفخمة
     client.on(Events.MessageCreate, async (message) => {
       if (message.author.bot) return;
       const content = message.content.trim().toLowerCase();
 
       if (content === `!panel${botNum}` || content === '!panel') {
         const embed = new EmbedBuilder()
-          .setColor(0xFFA500) // لون برتقالي فخم
+          .setColor(0xFFA500)
           .setTitle(`☁️ • Sudanship • Music Dashboard`)
-          .setDescription(`• **مرحباً بك يا عضو Sudanship في عالم الموسيقى.**\n• البوت متواجد وثابت في روم **${botInfo.name}** على مدار الساعة 24/7.\n• اضغط على أزرار المنصات أدناه للبحث عن الأغاني وتشغيلها فوراً:`)
-          .setFooter({ text: `Sudanship • High Quality Music System` });
+          .setDescription(`• **مرحباً بك يا عضو Sudanship في عالم الموسيقى.**\n• البوت ذكي ومتواجد وثابت في الروم الصوتي 24/7.\n• اضغط على أزرار المنصات أدناه للبحث عن الأغاني وتشغيلها فوراً:`)
+          .setFooter({ text: `Sudanship • Ultimate Music Experience` });
 
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
@@ -113,7 +113,7 @@ botsData.forEach((botInfo, index) => {
       }
     });
 
-    // نظام التفاعل الذكي مع الأزرار والنوافذ
+    // التفاعل مع الأزرار والنوافذ وتشغيل الصوت الحقيقي مع صورة الأغنية
     client.on(Events.InteractionCreate, async (interaction) => {
       try {
         if (interaction.isButton()) {
@@ -139,14 +139,44 @@ botsData.forEach((botInfo, index) => {
 
           if (interaction.customId === `stop_music_${botNum}`) {
             player.stop();
-            return await interaction.reply({ content: '⏹️ تم إيقاف الموسيقى بنجاح.', ephemeral: true });
+            return await interaction.reply({ content: '⏹️ تم إيقاف الموسيقى وإفراغ المشغل.', ephemeral: true });
           }
         }
 
         if (interaction.isModalSubmit()) {
           if (interaction.customId === `search_modal_${botNum}`) {
             const query = interaction.fields.getTextInputValue('song_query');
-            await interaction.reply({ content: `▶️ تم استلام طلبك بنجاح لـ: **${query}**. بوت **${botInfo.name}** شغال وثابت في رومته وجاهز للتشغيل!`, ephemeral: false });
+            await interaction.reply({ content: `🔍 جاري البحث والتشغيل الذكي لـ: **${query}**...`, ephemeral: true });
+
+            // البحث الذكي وجلب معلومات الأغنية وصورتها
+            let searchResults = await play.search(query, { limit: 1 });
+            if (!searchResults || searchResults.length === 0) {
+              return interaction.editReply({ content: '❌ لم يتم العثور على نتائج مطابقة!' });
+            }
+
+            let song = searchResults[0];
+            let stream = await play.stream(song.url);
+            let resource = createAudioResource(stream.stream, { inputType: stream.type });
+            
+            player.play(resource);
+
+            // لوحة عرض الأغنية الحالية مع الصورة والزر الفخم
+            const playingEmbed = new EmbedBuilder()
+              .setColor(0xFFA500)
+              .setTitle(`🎵 • جاري يُشغّل الآن`)
+              .setDescription(`**[${song.title}](${song.url})**\n\n• **القناة / الفنان:** ${song.channel?.name || 'Unknown'}\n• **المدة:** ${song.duration || 'Live'}`)
+              .setImage(song.thumbnails[0]?.url || 'https://i.imgur.com/3g7X7Q8.png')
+              .setFooter({ text: `Sudanship • Requested by ${interaction.user.tag}` });
+
+            const controlRow = new ActionRowBuilder().addComponents(
+              new ButtonBuilder()
+                .setCustomId(`stop_music_${botNum}`)
+                .setLabel('إيقاف')
+                .setStyle(ButtonStyle.Danger)
+                .setEmoji('⏹️')
+            );
+
+            await interaction.followUp({ embeds: [playingEmbed], components: [controlRow], ephemeral: false });
           }
         }
       } catch (err) {
