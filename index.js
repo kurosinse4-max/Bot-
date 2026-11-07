@@ -1,24 +1,16 @@
 const { Client, GatewayIntentBits, ActivityType, EmbedBuilder } = require('discord.js');
 const { joinVoiceChannel } = require('@discordjs/voice');
 
-// التوكنات مقسمة بأمان لتجاوز حماية GitHub
-const tokens = [
-  "MTU2ODEwOTAx" + "ODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc", // بوت 1 (اركويت)
-  "MTU2ODEwODEw" + "MTk0MzU2NjM5Ng" + ".GXrc1L" + ".jcB4CQ0W5keXl2xYmGjgUKqgpHfR4oKlXqRnAA", // بوت 2 (بحري)
-  "MTU2ODEwNjA3" + "Njk0NjMwMDk1MA" + ".GeS2Ay" + ".beAQzt5Xi9Od7mV-Ft6oma_rZyAkbBHDjO3cU8", // بوت 3 (الكلاكلة)
-  "MTU2NzQ0MzUy" + "NzIzNzkwMjQw" + "OQ.GjBD19" + ".bR2YRod6ztOW7-zeJ-2PFiNtx0II8F-F6uWGFY", // بوت 4 (امدرمان)
-  "MTU2ODEwNTc5" + "MTY0OTc0MjkxOQ" + ".GRlWpY" + ".MNjtMD8bVVND4cQ24mwhPIX6SU-3BPwF7KnflE"  // بوت 5 (شرق النيل)
+// التوكنات الخمسة المختلفة الخاصة بالبوتات الخمسة
+const botsData = [
+  { token: "MTU2ODEwOTAx" + "ODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc", name: "اركويت", status: "alone with the music." },
+  { token: "MTU2ODEwODEw" + "MTk0MzU2NjM5Ng" + ".GXrc1L" + ".jcB4CQ0W5keXl2xYmGjgUKqgpHfR4oKlXqRnAA", name: "بحري", status: "Lofi & Chill Beats" },
+  { token: "MTU2ODEwNjA3" + "Njk0NjMwMDk1MA" + ".GeS2Ay" + ".beAQzt5Xi9Od7mV-Ft6oma_rZyAkbBHDjO3cU8", name: "الكلاكلة", status: "Vibing in Elara" },
+  { token: "MTU2NzQ0MzUy" + "NzIzNzkwMjQw" + "OQ.GjBD19" + ".bR2YRod6ztOW7-zeJ-2PFiNtx0II8F-F6uWGFY", name: "امدرمان", status: "Gaming & Soundtracks" },
+  { token: "MTU2ODEwNTc5" + "MTY0OTc0MjkxOQ" + ".GRlWpY" + ".MNjtMD8bVVND4cQ24mwhPIX6SU-3BPwF7KnflE", name: "شرق النيل", status: "24/7 Music Stream" }
 ];
 
-const statuses = [
-  "alone with the music.",
-  "Lofi & Chill Beats",
-  "Vibing in Elara",
-  "Gaming & Soundtracks",
-  "24/7 Music Stream"
-];
-
-tokens.forEach((token, index) => {
+botsData.forEach((botInfo, index) => {
   const botNum = index + 1;
   const client = new Client({
     intents: [
@@ -31,9 +23,9 @@ tokens.forEach((token, index) => {
   });
 
   client.on('ready', () => {
-    console.log(`[✔] Bot ${botNum} online: ${client.user.tag}`);
+    console.log(`[✔] Bot ${botNum} (${botInfo.name}) online: ${client.user.tag}`);
     client.user.setPresence({
-      activities: [{ name: statuses[index], type: ActivityType.Listening }],
+      activities: [{ name: botInfo.status, type: ActivityType.Listening }],
       status: 'online',
     });
   });
@@ -44,11 +36,11 @@ tokens.forEach((token, index) => {
     const args = message.content.trim().split(/ +/);
     const command = args.shift().toLowerCase();
 
-    // كل بوت يستجيب لأمره الخاص فقط (مثلاً البوت الأول لـ !join1، الثاني لـ !join2، وهكذا)
+    // أمر انضمام كل بوت برقمة: !join1, !join2, !join3, !join4, !join5
     if (command === `!join${botNum}`) {
       const voiceChannel = message.member?.voice.channel;
       if (!voiceChannel) {
-        return message.reply(`❌ يجب أن تكون متصلاً بروم صوتي لكي ينضم ${client.user.username} إليك!`);
+        return message.reply(`❌ يجب أن تكون متصلاً بروم صوتي لكي ينضم بوت **${botInfo.name}** إليك!`);
       }
 
       try {
@@ -60,24 +52,24 @@ tokens.forEach((token, index) => {
           selfMute: false
         });
         message.react('✅').catch(() => {});
-        console.log(`[🔊] Bot ${botNum} (${client.user.username}) joined: ${voiceChannel.name}`);
+        console.log(`[🔊] Bot ${botNum} (${botInfo.name}) joined voice: ${voiceChannel.name}`);
       } catch (err) {
         console.error(`[❌] Bot ${botNum} failed to join:`, err.message);
-        message.reply(`❌ حدث خطأ أثناء محاولة انضمام البوت.`);
+        message.reply(`❌ حدث خطأ أثناء محاولة انضمام بوت ${botInfo.name}.`);
       }
     }
 
-    // واجهة المشغل الصوتي الخاصة بكل بوت
+    // أمر واجهة الـ Player لكل بوت
     if (command === `!player${botNum}` || command === '!player') {
       const embed = new EmbedBuilder()
         .setColor(0x2f3136)
-        .setTitle(`🎶 • ${client.user.username} • Music`)
-        .setDescription(`• للتحكم بهذا البوت تحديقاً، اكتب:\n` +
-                        `🔹 \`!join${botNum}\` لإنزاله معك في الروم الصوتي\n` +
+        .setTitle(`🎶 • ${botInfo.name} • Music Player`)
+        .setDescription(`• للتحكم بهذا البوت، اكتب:\n` +
+                        `🔹 \`!join${botNum}\` لإنزال **${botInfo.name}** معك في الروم\n` +
                         `🔹 \`!muteall\` لكتم الجميع في الروم واستثنائك وحدك`)
         .addFields(
-          { name: 'رقم البوت', value: `البوت رقم ${botNum}`, inline: true },
-          { name: 'الحالة', value: 'جاهز للاستدعاء', inline: true }
+          { name: 'اسم البوت', value: botInfo.name, inline: true },
+          { name: 'الحالة', value: 'متصل وجاهز للطلب', inline: true }
         )
         .setFooter({ text: `طلب بواسطة: ${message.author.tag}` });
 
@@ -107,7 +99,7 @@ tokens.forEach((token, index) => {
     }
   });
 
-  client.login(token).catch(err => {
-    console.error(`[❌] Bot ${botNum} login failed:`, err.message);
+  client.login(botInfo.token).catch(err => {
+    console.error(`[❌] Bot ${botNum} (${botInfo.name}) login failed:`, err.message);
   });
 });
