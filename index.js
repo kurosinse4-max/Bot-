@@ -9,13 +9,13 @@ const tokens = [
   "MTU2ODEwNTc5MTY0OTc0MjkxOQ" + ".GRlWpY" + ".MNjtMD8bVVND4cQ24mwhPIX6SU-3BPwF7KnflE"
 ];
 
-// استبدل الأرقام دي بـ IDs الرومات الصوتية الخاصة بكل بوت بالترتيب
+// الآيديهات المستخرجة من روابط رومات ديسكورد الخاصة بك بالترتيب:
 const channelIds = [
-  "ضع_آيدي_روم_اركويت_هنا",
-  "ضع_آيدي_روم_بحري_هنا",
-  "ضع_آيدي_روم_الكلاكلة_هنا",
-  "ضع_آيدي_روم_امدرمان_هنا",
-  "ضع_آيدي_روم_شرق_النيل_هنا"
+  "1529477320010895370", // بوت 1 (اركويت)
+  "1530676107408445450", // بوت 2 (بحري)
+  "1530673230678069309", // بوت 3 (الكلاكلة)
+  "1530676230335238336", // بوت 4 (امدرمان)
+  "1539695465568796672"  // بوت 5 (شرق النيل)
 ];
 
 const statuses = [
@@ -47,7 +47,7 @@ tokens.forEach((token, index) => {
 
     // الاتصال التلقائي بالروم الصوتي مع Self-Deafen وحماية ضد الفصل
     const channelId = channelIds[index];
-    if (!channelId || channelId.startsWith("ضع_")) return;
+    if (!channelId) return;
 
     try {
       const channel = await client.channels.fetch(channelId);
