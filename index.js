@@ -9,7 +9,7 @@ const botsData = [
   { token: "MTU2ODEwNTc5" + "MTY0OTc0MjkxOQ" + ".GRlWpY" + ".MNjtMD8bVVND4cQ24mwhPIX6SU-3BPwF7KnflE", name: "شرق النيل", channelId: "1539695465568796672", status: "24/7 Music Stream" }
 ];
 
-const startBot = (botInfo, index) => {
+botsData.forEach((botInfo, index) => {
   const botNum = index + 1;
 
   setTimeout(() => {
@@ -72,7 +72,6 @@ const startBot = (botInfo, index) => {
 
     client.on(Events.MessageCreate, async (message) => {
       if (message.author.bot) return;
-
       const content = message.content.trim().toLowerCase();
 
       if (content === `!panel${botNum}` || content === '!panel') {
@@ -107,7 +106,7 @@ const startBot = (botInfo, index) => {
       if (!interaction.isButton()) return;
 
       if (interaction.customId === `status_btn_${botNum}`) {
-        await interaction.reply({ content: `✅ بوت **${botInfo.name}** شغال 100% وثابت في رومته الصوتي وجاهز!`, ephemeral: true });
+        await interaction.reply({ content: `✅ بوت **${botInfo.name}** شغال 100% وثابت في رومته وجاهز!`, ephemeral: true });
       }
 
       if (interaction.customId === `ping_btn_${botNum}`) {
@@ -119,7 +118,5 @@ const startBot = (botInfo, index) => {
     client.login(botInfo.token).catch(err => {
       console.error(`[❌] Bot ${botNum} login failed:`, err.message);
     });
-  }, index * 5000);
-};
-
-botsData.forEach((bot, idx) => startBot(bot, idx));
+  }, index * 4000);
+});
