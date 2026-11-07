@@ -1,5 +1,8 @@
-const { Client, GatewayIntentBits, ActivityType, Events } = require('discord.js');
+const { Client, GatewayIntentBits, ActivityType, Events, EmbedBuilder } = require('discord.js');
 const { joinVoiceChannel } = require('@discordjs/voice');
+
+// ⚠️ حط آيدي حسابك الشخصي هنا عشان تكون المالك الوحيد اللي له صلاحية التحكم
+const OWNER_ID = "حط_آيدي_حسابك_هنا";
 
 const botsData = [
   { token: "MTU2ODEwOTAx" + "ODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc", name: "اركويت", channelId: "1529477320010895370", status: "alone with the music." },
@@ -12,7 +15,6 @@ const botsData = [
 const startBot = (botInfo, index) => {
   const botNum = index + 1;
 
-  // زيادة الفاصل الزمني إلى 7 ثوانٍ بين كل بوت والثاني لمنع تداخل اتصالات الصوت
   setTimeout(() => {
     const client = new Client({
       intents: [
@@ -31,7 +33,7 @@ const startBot = (botInfo, index) => {
         status: 'online',
       });
 
-      // تأخير بسيط إضافي قبل دخول الروم الصوتي الخاص بكل بوت
+      // الدخول التلقائي والثابت للروم الخاص لكل بوت
       setTimeout(async () => {
         try {
           const channel = await c.channels.fetch(botInfo.channelId);
@@ -41,22 +43,77 @@ const startBot = (botInfo, index) => {
               guildId: channel.guild.id,
               adapterCreator: channel.guild.voiceAdapterCreator,
               selfDeaf: true,
-              selfMute: false
+              selfMute: false,
+              group: `bot_${botNum}`
             });
-            console.log(`[🔊] Bot ${botNum} (${botInfo.name}) successfully joined voice channel: ${channel.name}`);
-          } else {
-            console.log(`[❌] Bot ${botNum} could not find voice channel: ${botInfo.channelId}`);
+            console.log(`[🔊] Bot ${botNum} (${botInfo.name}) secured room: ${channel.name}`);
           }
         } catch (err) {
           console.error(`[❌] Bot ${botNum} voice join error:`, err.message);
         }
-      }, 3000);
+      }, 4000);
+    });
+
+    // 🛡️ حماية صارمة: إذا حاول أي شخص إخراج البوت من الروم، يعود فوراً مكانه
+    client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+      if (newState.member?.id === client.user.id && !newState.channelId) {
+        setTimeout(async () => {
+          try {
+            const channel = await client.channels.fetch(botInfo.channelId);
+            if (channel) {
+              joinVoiceChannel({
+                channelId: channel.id,
+                guildId: channel.guild.id,
+                adapterCreator: channel.guild.voiceAdapterCreator,
+                selfDeaf: true,
+                selfMute: false,
+                group: `bot_${botNum}`
+              });
+            }
+          } catch (e) {}
+        }, 500);
+      }
+    });
+
+    // استقبال الأوامر (مثل الميوت الجماعي بأمر منك وحدك)
+    client.on(Events.MessageCreate, async (message) => {
+      if (message.author.bot) return;
+
+      const content = message.content.trim().toLowerCase();
+
+      // أمر الميوت الجماعي (يعمل فقط عندما تكتبه أنت)
+      if (content === '!muteall' || content === `!mute${botNum}`) {
+        // التحقق أنك أنت صاحب الأمر
+        if (OWNER_ID !== "حط_آيدي_حسابك_هنا" && message.author.id !== OWNER_ID) {
+          return message.reply('❌ عذراً، هذا الأمر مخصص لمالك البوتات فقط!');
+        }
+
+        const memberChannel = message.member?.voice.channel;
+        if (!memberChannel) {
+          return message.reply('❌ يجب أن تكون متصلاً بروم صوتي لتنفيذ أمر الميوت!');
+        }
+
+        try {
+          let mutedCount = 0;
+          for (const [memberId, member] of memberChannel.members) {
+            // كتم الجميع باستثنائك أنت وحدك وباقي البوتات
+            if (memberId !== message.author.id && !member.user.bot) {
+              await member.voice.setMute(true, 'Requested by owner: ' + message.author.tag);
+              mutedCount++;
+            }
+          }
+          message.reply(`[🔇] تم كتم ${mutedCount} أعضاء في الروم، وتم استثنائك أنت وحدك يا مهند!`);
+        } catch (err) {
+          console.error('Failed to mute members:', err);
+          message.reply('❌ حدث خطأ أثناء محاولة كتم الأعضاء.');
+        }
+      }
     });
 
     client.login(botInfo.token).catch(err => {
       console.error(`[❌] Bot ${botNum} login failed:`, err.message);
     });
-  }, index * 7000);
+  }, index * 5000);
 };
 
 botsData.forEach((bot, idx) => startBot(bot, idx));
