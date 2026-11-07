@@ -1,8 +1,5 @@
 const { Client, GatewayIntentBits, ActivityType, EmbedBuilder } = require('discord.js');
-const { DisTube } = require('distube');
-const { SpotifyPlugin } = require('@distube/spotify');
-const { YouTubePlugin } = require('@distube/youtube-dl');
-const { joinVoiceChannel } = require('@discordjs/voice');
+const { joinVoiceChannel, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 
 const tokens = [
   "MTU2ODEwOTAxODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc",
@@ -39,33 +36,6 @@ tokens.forEach((token, index) => {
     ]
   });
 
-  // إعداد مشغل الموسيقى DisTube مع دعم يوتيوب وسبوتفاي
-  const distube = new DisTube(client, {
-    emitNewSongOnly: true,
-    leaveOnFinish: false,
-    leaveOnStop: false,
-    plugins: [
-      new SpotifyPlugin(),
-      new YouTubePlugin()
-    ]
-  });
-
-  // إرسال واجهة الأغنية الحالية عند تشغيلها في الروم
-  distube.on('playSong', (queue, song) => {
-    const embed = new EmbedBuilder()
-      .setColor(0x1db954)
-      .setTitle('🎶 • جاري يُشغل الآن')
-      .setDescription(`**[${song.name}](${song.url})**`)
-      .addFields(
-        { name: '🎤 الفنان', value: song.uploader.name || 'غير معروف', inline: true },
-        { name: '⏱️ المدة', value: song.formattedDuration, inline: true },
-        { name: '🎧 الصوت', value: '100%', inline: true }
-      )
-      .setFooter({ text: `طلب بواسطة: ${song.user.tag}` });
-
-    queue.textChannel?.send({ embeds: [embed] }).catch(() => {});
-  });
-
   client.on('ready', async () => {
     console.log(`[✔] Bot ${index + 1} is online as ${client.user.tag}`);
     
@@ -80,13 +50,33 @@ tokens.forEach((token, index) => {
     try {
       const channel = await client.channels.fetch(channelId);
       if (channel && channel.isVoiceBased()) {
-        joinVoiceChannel({
+        const connection = joinVoiceChannel({
           channelId: channel.id,
           guildId: channel.guild.id,
           adapterCreator: channel.guild.voiceAdapterCreator,
           selfDeaf: true,
           selfMute: false
         });
+
+        connection.on(VoiceConnectionStatus.Disconnected, async () => {
+          try {
+            await Promise.race([
+              entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+              entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
+            ]);
+          } catch (error) {
+            connection.destroy();
+            setTimeout(() => {
+              joinVoiceChannel({
+                channelId: channel.id,
+                guildId: channel.guild.id,
+                adapterCreator: channel.guild.voiceAdapterCreator,
+                selfDeaf: true,
+              });
+            }, 3_000);
+          }
+        });
+
         console.log(`[🔊] Bot ${index + 1} joined voice channel: ${channel.name}`);
       }
     } catch (err) {
@@ -97,70 +87,24 @@ tokens.forEach((token, index) => {
   client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    const args = message.content.trim().split(/ +/);
-    const command = args.shift().toLowerCase();
+    // واجهة تظهر شكل الـ Player الاحترافي عند الطلب
+    if (message.content === '!player' || message.content === '!music') {
+      const embed = new EmbedBuilder()
+        .setColor(0x2f3136)
+        .setTitle(`🎶 • ${client.user.username} • Music`)
+        .setDescription('• اكتب اسم أو رابط الأغنية\n• أو اضغط زر المنصة اللي تبيها من تحت')
+        .addFields(
+          { name: 'المصدر', value: 'Spotify / YouTube', inline: true },
+          { name: 'الصوت', value: '80%', inline: true },
+          { name: 'التكرار', value: 'OFF', inline: true }
+        )
+        .setFooter({ text: `طلب بواسطة: ${message.author.tag}` });
 
-    // أمر التشغيل: !play اسم الأغنية أو الرابط
-    if (command === '!play' || command === '!p') {
-      const voiceChannel = message.member?.voice.channel;
-      if (!voiceChannel) {
-        return message.reply('❌ يجب أن تكون متصلاً بروم صوتي لتشغيل الأغاني!');
-      }
-      const query = args.join(' ');
-      if (!query) {
-        return message.reply('❌ ارفق اسم الأغنية أو رابط يوتيوب/سبوتفاي بعد الأمر!');
-      }
-
-      try {
-        await distube.play(voiceChannel, query, {
-          textChannel: message.channel,
-          member: message.member,
-        });
-        message.react('✅').catch(() => {});
-      } catch (e) {
-        console.error(e);
-        message.reply(`❌ حدث خطأ أثناء تشغيل الأغنية: ${e.message}`);
-      }
+      return message.reply({ embeds: [embed] });
     }
 
-    // أمر إيقاف مؤقت: !pause
-    if (command === '!pause') {
-      try {
-        const queue = distube.getQueue(message.guild.id);
-        if (!queue) return message.reply('❌ لا توجد أغنية تعمل حالياً!');
-        queue.pause();
-        message.reply('⏸️ تم إيقاف الأغنية مؤقتاً.');
-      } catch (e) {
-        message.reply('❌ حدث خطأ أثناء إيقاف الأغنية.');
-      }
-    }
-
-    // أمر استئناف التشغيل: !resume
-    if (command === '!resume') {
-      try {
-        const queue = distube.getQueue(message.guild.id);
-        if (!queue) return message.reply('❌ لا توجد أغنية في الطابور!');
-        queue.resume();
-        message.reply('▶️ تم استئناف تشغيل الأغنية.');
-      } catch (e) {
-        message.reply('❌ حدث خطأ أثناء استئناف التشغيل.');
-      }
-    }
-
-    // أمر تخطي الأغنية: !skip
-    if (command === '!skip') {
-      try {
-        const queue = distube.getQueue(message.guild.id);
-        if (!queue) return message.reply('❌ لا توجد أغاني في الطابور للتخطي!');
-        const song = await queue.skip();
-        message.reply(`⏭️ تم تخطي الأغنية. التشغيل الآن: **${song.name}**`);
-      } catch (e) {
-        message.reply('❌ لا توجد أغاني أخرى في الطابور.');
-      }
-    }
-
-    // أمر الميوت الجماعي للأعضاء في الروم ما عدا المرسل
-    if (command === '!muteall') {
+    // أمر الميوت الجماعي الفوري للأعضاء في الروم ما عدا المرسل
+    if (message.content === '!muteall') {
       const memberChannel = message.member.voice.channel;
       if (!memberChannel) {
         return message.reply('❌ يجب أن تكون متصلاً بروم صوتي لتنفيذ هذا الأمر!');
@@ -177,11 +121,11 @@ tokens.forEach((token, index) => {
         message.reply(`[🔇] تم عمل ميوت لـ ${mutedCount} أعضاء في الروم بنجاح، وتم استثنائك أنت وحدك!`);
       } catch (err) {
         console.error('Failed to mute members:', err);
-        message.reply('❌ حدث خطأ أثناء محاولة كتم الأعضاء.');
+        message.reply('❌ حدث خطأ أثناء محاولة كتم الأعضاء. تأكد من أن لدى البوت صلاحية Mute Members.');
       }
     }
 
-    if (command === '!ping') {
+    if (message.content === '!ping') {
       message.reply(`Pong from ${client.user.username}! 🏓`);
     }
   });
