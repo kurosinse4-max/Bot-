@@ -2,8 +2,6 @@ const { Client, GatewayIntentBits, ActivityType, Events, EmbedBuilder, ActionRow
 const { joinVoiceChannel, createAudioPlayer, createAudioResource } = require('@discordjs/voice');
 const play = require('play-dl');
 
-const OWNER_ID = "حط_آيدي_حسابك_هنا"; // حط آيدي حسابك للتحكم الكامل
-
 const botsData = [
   { token: "MTU2ODEwOTAx" + "ODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc", name: "اركويت", channelId: "1529477320010895370", status: "alone with the music." },
   { token: "MTU2ODEwODEw" + "MTk0MzU2NjM5Ng" + ".GXrc1L" + ".jcB4CQ0W5keXl2xYmGjgUKqgpHfR4oKlXqRnAA", name: "بحري", channelId: "1530676107408445450", status: "Lofi & Chill Beats" },
@@ -50,12 +48,15 @@ const startBot = (botInfo, index) => {
               group: `bot_${botNum}`
             });
             currentConnection.subscribe(player);
+            console.log(`[🔊] Bot ${botNum} (${botInfo.name}) joined voice.`);
           }
-        } catch (err) {}
+        } catch (err) {
+          console.error(`[❌] Voice join error for bot ${botNum}:`, err.message);
+        }
       }, 4000);
     });
 
-    // حماية ضد الطرد من الروم
+    // الحماية ضد الطرد أو التحريك من الروم
     client.on(Events.VoiceStateUpdate, (oldState, newState) => {
       if (newState.member?.id === client.user.id && !newState.channelId) {
         setTimeout(async () => {
@@ -77,7 +78,7 @@ const startBot = (botInfo, index) => {
       }
     });
 
-    // إرسال لوحة التحكم التفاعلية بالأزرار عند كتابة أمر !panel
+    // إرسال لوحة التحكم عبر أمر !panel
     client.on(Events.MessageCreate, async (message) => {
       if (message.author.bot) return;
 
@@ -85,7 +86,7 @@ const startBot = (botInfo, index) => {
         const embed = new EmbedBuilder()
           .setColor(0x2f3136)
           .setTitle(`🎶 • ${botInfo.name} • Music Dashboard`)
-          .setDescription(`• أهلاً بك يا مهند في لوحة تحكم **${botInfo.name}**.\n• اضغط على الزر أدناه لاختيار الأغنية أو لصق رابط يوتيوب مباشرة:`)
+          .setDescription(`• أهلاً بك يا مهند في لوحة تحكم **${botInfo.name}**.\n• اضغط على الزر أدناه لتشغيل الأغاني:`)
           .setFooter({ text: `Elara • Music System` });
 
         const row = new ActionRowBuilder().addComponents(
@@ -105,38 +106,37 @@ const startBot = (botInfo, index) => {
       }
     });
 
-    // التعامل مع ضغط الأزرار والنوافذ التفاعلية (Modals)
+    // تفاعل الأزرار والنوافذ
     client.on(Events.InteractionCreate, async (interaction) => {
-      if (!interaction.isChatInputCommand() && interaction.isButton()) {
-        if (interaction.customId === `open_modal_${botNum}`) {
-          const modal = new ModalBuilder()
-            .setCustomId(`music_modal_${botNum}`)
-            .setTitle(`${botInfo.name} - YouTube Player`);
+      try {
+        if (interaction.isButton()) {
+          if (interaction.customId === `open_modal_${botNum}`) {
+            const modal = new ModalBuilder()
+              .setCustomId(`music_modal_${botNum}`)
+              .setTitle(`${botInfo.name} - YouTube Player`);
 
-          const songInput = new TextInputBuilder()
-            .setCustomId('song_query')
-            .setLabel('اسم الأغنية أو رابط يوتيوب')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('اكتب اسم الأغنية هنا...')
-            .setRequired(true);
+            const songInput = new TextInputBuilder()
+              .setCustomId('song_query')
+              .setLabel('اسم الأغنية أو رابط يوتيوب')
+              .setStyle(TextInputStyle.Short)
+              .setPlaceholder('اكتب اسم الأغنية هنا...')
+              .setRequired(true);
 
-          modal.addComponents(new ActionRowBuilder().addComponents(songInput));
-          return await interaction.showModal(modal);
+            modal.addComponents(new ActionRowBuilder().addComponents(songInput));
+            return await interaction.showModal(modal);
+          }
+
+          if (interaction.customId === `stop_music_${botNum}`) {
+            player.stop();
+            return await interaction.reply({ content: '⏹️ تم إيقاف الموسيقى.', ephemeral: true });
+          }
         }
 
-        if (interaction.customId === `stop_music_${botNum}`) {
-          player.stop();
-          return await interaction.reply({ content: '⏹️ تم إيقاف الموسيقى مؤقتاً.', ephemeral: true });
-        }
-      }
+        if (interaction.isModalSubmit()) {
+          if (interaction.customId === `music_modal_${botNum}`) {
+            const query = interaction.fields.getTextInputValue('song_query');
+            await interaction.reply({ content: `🔍 جاري البحث والتشغيل لـ: **${query}**...`, ephemeral: true });
 
-      // استقبال الرد من النافذة (Modal) وتشغيل الأغنية
-      if (interaction.isModalSubmit()) {
-        if (interaction.customId === `music_modal_${botNum}`) {
-          const query = interaction.fields.getTextInputValue('song_query');
-          await interaction.reply({ content: `🔍 جاري البحث والتشغيل لـ: **${query}**...`, ephemeral: true });
-
-          try {
             let streamData = await play.search(query, { limit: 1 });
             if (!streamData || streamData.length === 0) {
               return interaction.editReply({ content: '❌ لم يتم العثور على نتائج!' });
@@ -147,15 +147,16 @@ const startBot = (botInfo, index) => {
             player.play(resource);
 
             await interaction.followUp({ content: `▶️ يتم الآن تشغيل: **${streamData[0].title}**`, ephemeral: false });
-          } catch (err) {
-            console.error(err);
-            await interaction.editReply({ content: '❌ حدث خطأ أثناء تشغيل الملف الصوتي.' });
           }
         }
+      } catch (err) {
+        console.error('Interaction Error:', err);
       }
     });
 
-    client.login(botInfo.token).catch(err => {});
+    client.login(botInfo.token).catch(err => {
+      console.error(`[❌] Bot ${botNum} login failed:`, err.message);
+    });
   }, index * 5000);
 };
 
