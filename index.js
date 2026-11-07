@@ -1,7 +1,6 @@
 const { Client, GatewayIntentBits, ActivityType, EmbedBuilder } = require('discord.js');
 const { joinVoiceChannel } = require('@discordjs/voice');
 
-// التوكنات الخمسة المختلفة الخاصة بالبوتات الخمسة
 const botsData = [
   { token: "MTU2ODEwOTAx" + "ODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc", name: "اركويت", status: "alone with the music." },
   { token: "MTU2ODEwODEw" + "MTk0MzU2NjM5Ng" + ".GXrc1L" + ".jcB4CQ0W5keXl2xYmGjgUKqgpHfR4oKlXqRnAA", name: "بحري", status: "Lofi & Chill Beats" },
@@ -12,6 +11,7 @@ const botsData = [
 
 botsData.forEach((botInfo, index) => {
   const botNum = index + 1;
+  
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -22,8 +22,8 @@ botsData.forEach((botInfo, index) => {
     ]
   });
 
-  client.on('ready', () => {
-    console.log(`[✔] Bot ${botNum} (${botInfo.name}) online: ${client.user.tag}`);
+  client.once('ready', () => {
+    console.log(`[✔] Bot ${botNum} (${botInfo.name}) is online as ${client.user.tag}`);
     client.user.setPresence({
       activities: [{ name: botInfo.status, type: ActivityType.Listening }],
       status: 'online',
@@ -33,11 +33,10 @@ botsData.forEach((botInfo, index) => {
   client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
-    const args = message.content.trim().split(/ +/);
-    const command = args.shift().toLowerCase();
+    const content = message.content.trim().toLowerCase();
 
-    // أمر انضمام كل بوت برقمة: !join1, !join2, !join3, !join4, !join5
-    if (command === `!join${botNum}`) {
+    // أمر الانضمام الخاص بهذا البوت فقط: !join1, !join2, etc.
+    if (content === `!join${botNum}`) {
       const voiceChannel = message.member?.voice.channel;
       if (!voiceChannel) {
         return message.reply(`❌ يجب أن تكون متصلاً بروم صوتي لكي ينضم بوت **${botInfo.name}** إليك!`);
@@ -59,8 +58,8 @@ botsData.forEach((botInfo, index) => {
       }
     }
 
-    // أمر واجهة الـ Player لكل بوت
-    if (command === `!player${botNum}` || command === '!player') {
+    // أمر المشغل الصوتي الخاص بهذا البوت
+    if (content === `!player${botNum}` || content === '!player') {
       const embed = new EmbedBuilder()
         .setColor(0x2f3136)
         .setTitle(`🎶 • ${botInfo.name} • Music Player`)
@@ -77,7 +76,7 @@ botsData.forEach((botInfo, index) => {
     }
 
     // أمر الميوت الجماعي
-    if (command === '!muteall') {
+    if (content === '!muteall') {
       const memberChannel = message.member.voice.channel;
       if (!memberChannel) {
         return message.reply('❌ يجب أن تكون متصلاً بروم صوتي لتنفيذ هذا الأمر!');
