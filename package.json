@@ -1,7 +1,6 @@
 {
-  "name": "discord-bots",
+  "name": "bot",
   "version": "1.0.0",
-  "description": "5 Voice Bots",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
