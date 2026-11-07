@@ -1,4 +1,5 @@
 const { Client, GatewayIntentBits, ActivityType, EmbedBuilder } = require('discord.js');
+const { joinVoiceChannel } = require('@discordjs/voice');
 
 const tokens = [
   "MTU2ODEwOTAxODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc",
@@ -43,22 +44,27 @@ tokens.forEach((token, index) => {
       status: 'online',
     });
 
-    // الانضمام الخفيف والمستقر للروم الصوتي
     const channelId = channelIds[index];
     if (!channelId) return;
 
+    // الاتصال الفعلي بالروم الصوتي لكل بوت بفاصل زمني
     setTimeout(async () => {
       try {
         const channel = await client.channels.fetch(channelId);
         if (channel && channel.isVoiceBased()) {
-          // محاولة الانضمام للروم عبر الـ VoiceState الداخلي لـ Discord.js بدون مكتبات خارجية معقدة
-          await channel.guild.members.me?.voice.setChannel(channel).catch(() => {});
-          console.log(`[🔊] Bot ${index + 1} is active for channel: ${channel.name}`);
+          joinVoiceChannel({
+            channelId: channel.id,
+            guildId: channel.guild.id,
+            adapterCreator: channel.guild.voiceAdapterCreator,
+            selfDeaf: true, // كتم الصوت تلقائياً (Self-Deaf)
+            selfMute: false
+          });
+          console.log(`[🔊] Bot ${index + 1} successfully joined voice channel: ${channel.name}`);
         }
       } catch (err) {
-        console.error(`[❌] Bot ${index + 1} voice error:`, err.message);
+        console.error(`[❌] Bot ${index + 1} voice connection error:`, err.message);
       }
-    }, index * 2000);
+    }, index * 2500); // 2.5 ثانية فاصل بين كل بوت والثاني عشان الاستقرار
   });
 
   client.on('messageCreate', async (message) => {
@@ -68,7 +74,7 @@ tokens.forEach((token, index) => {
       const embed = new EmbedBuilder()
         .setColor(0x2f3136)
         .setTitle(`🎶 • ${client.user.username} • Music`)
-        .setDescription('• واجهة المشغل الصوتي نشطة\n• البوت جاهز للأوامر والتحكم')
+        .setDescription('• واجهة المشغل الصوتي نشطة\n• البوت متصل في الروم وجاهز')
         .addFields(
           { name: 'الحالة', value: 'متصل 24/7', inline: true },
           { name: 'الصوت', value: '100%', inline: true }
