@@ -3,11 +3,11 @@ const { joinVoiceChannel } = require('@discordjs/voice');
 
 // التوكنات مقسمة بأمان لتجاوز حماية GitHub
 const tokens = [
-  "MTU2ODEwOTAx" + "ODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc",
-  "MTU2ODEwODEw" + "MTk0MzU2NjM5Ng" + ".GXrc1L" + ".jcB4CQ0W5keXl2xYmGjgUKqgpHfR4oKlXqRnAA",
-  "MTU2ODEwNjA3" + "Njk0NjMwMDk1MA" + ".GeS2Ay" + ".beAQzt5Xi9Od7mV-Ft6oma_rZyAkbBHDjO3cU8",
-  "MTU2NzQ0MzUy" + "NzIzNzkwMjQw" + "OQ.GjBD19" + ".bR2YRod6ztOW7-zeJ-2PFiNtx0II8F-F6uWGFY",
-  "MTU2ODEwNTc5" + "MTY0OTc0MjkxOQ" + ".GRlWpY" + ".MNjtMD8bVVND4cQ24mwhPIX6SU-3BPwF7KnflE"
+  "MTU2ODEwOTAx" + "ODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc", // بوت 1 (اركويت)
+  "MTU2ODEwODEw" + "MTk0MzU2NjM5Ng" + ".GXrc1L" + ".jcB4CQ0W5keXl2xYmGjgUKqgpHfR4oKlXqRnAA", // بوت 2 (بحري)
+  "MTU2ODEwNjA3" + "Njk0NjMwMDk1MA" + ".GeS2Ay" + ".beAQzt5Xi9Od7mV-Ft6oma_rZyAkbBHDjO3cU8", // بوت 3 (الكلاكلة)
+  "MTU2NzQ0MzUy" + "NzIzNzkwMjQw" + "OQ.GjBD19" + ".bR2YRod6ztOW7-zeJ-2PFiNtx0II8F-F6uWGFY", // بوت 4 (امدرمان)
+  "MTU2ODEwNTc5" + "MTY0OTc0MjkxOQ" + ".GRlWpY" + ".MNjtMD8bVVND4cQ24mwhPIX6SU-3BPwF7KnflE"  // بوت 5 (شرق النيل)
 ];
 
 const statuses = [
@@ -19,6 +19,7 @@ const statuses = [
 ];
 
 tokens.forEach((token, index) => {
+  const botNum = index + 1;
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -30,7 +31,7 @@ tokens.forEach((token, index) => {
   });
 
   client.on('ready', () => {
-    console.log(`[✔] Bot ${index + 1} online: ${client.user.tag}`);
+    console.log(`[✔] Bot ${botNum} online: ${client.user.tag}`);
     client.user.setPresence({
       activities: [{ name: statuses[index], type: ActivityType.Listening }],
       status: 'online',
@@ -42,13 +43,12 @@ tokens.forEach((token, index) => {
 
     const args = message.content.trim().split(/ +/);
     const command = args.shift().toLowerCase();
-    const botNum = index + 1;
 
-    // أمر استدعاء البوت للروم: مثلاً تكتب !join1 أو !join 1
-    if (command === `!join${botNum}` || (command === '!join' && args[0] === `${botNum}`)) {
+    // كل بوت يستجيب لأمره الخاص فقط (مثلاً البوت الأول لـ !join1، الثاني لـ !join2، وهكذا)
+    if (command === `!join${botNum}`) {
       const voiceChannel = message.member?.voice.channel;
       if (!voiceChannel) {
-        return message.reply(`❌ يجب أن تكون متصلاً بروم صوتي لكي ينضم البوت ${botNum} إليك!`);
+        return message.reply(`❌ يجب أن تكون متصلاً بروم صوتي لكي ينضم ${client.user.username} إليك!`);
       }
 
       try {
@@ -60,31 +60,31 @@ tokens.forEach((token, index) => {
           selfMute: false
         });
         message.react('✅').catch(() => {});
-        console.log(`[🔊] Bot ${botNum} joined voice channel: ${voiceChannel.name}`);
+        console.log(`[🔊] Bot ${botNum} (${client.user.username}) joined: ${voiceChannel.name}`);
       } catch (err) {
         console.error(`[❌] Bot ${botNum} failed to join:`, err.message);
-        message.reply(`❌ حدث خطأ أثناء محاولة انضمام البوت ${botNum}.`);
+        message.reply(`❌ حدث خطأ أثناء محاولة انضمام البوت.`);
       }
     }
 
-    // واجهة المشغل الصوتي ومعلومات الأوامر
-    if (command === '!player' || command === '!music') {
+    // واجهة المشغل الصوتي الخاصة بكل بوت
+    if (command === `!player${botNum}` || command === '!player') {
       const embed = new EmbedBuilder()
         .setColor(0x2f3136)
         .setTitle(`🎶 • ${client.user.username} • Music`)
-        .setDescription(`• للتحكم بهذا البوت، اكتب:\n` +
+        .setDescription(`• للتحكم بهذا البوت تحديقاً، اكتب:\n` +
                         `🔹 \`!join${botNum}\` لإنزاله معك في الروم الصوتي\n` +
                         `🔹 \`!muteall\` لكتم الجميع في الروم واستثنائك وحدك`)
         .addFields(
-          { name: 'الحالة', value: 'جاهز للاستدعاء', inline: true },
-          { name: 'الصوت', value: '100%', inline: true }
+          { name: 'رقم البوت', value: `البوت رقم ${botNum}`, inline: true },
+          { name: 'الحالة', value: 'جاهز للاستدعاء', inline: true }
         )
         .setFooter({ text: `طلب بواسطة: ${message.author.tag}` });
 
       return message.reply({ embeds: [embed] });
     }
 
-    // أمر الميوت الجماعي للأعضاء في الروم ما عدا المرسل
+    // أمر الميوت الجماعي
     if (command === '!muteall') {
       const memberChannel = message.member.voice.channel;
       if (!memberChannel) {
@@ -96,7 +96,7 @@ tokens.forEach((token, index) => {
         for (const [memberId, member] of memberChannel.members) {
           if (memberId !== message.author.id && !member.user.bot) {
             await member.voice.setMute(true, 'Requested by ' + message.author.tag);
-            mutedCount++
+            mutedCount++;
           }
         }
         message.reply(`[🔇] تم عمل ميوت لـ ${mutedCount} أعضاء في الروم بنجاح، وتم استثنائك أنت وحدك!`);
@@ -108,6 +108,6 @@ tokens.forEach((token, index) => {
   });
 
   client.login(token).catch(err => {
-    console.error(`[❌] Bot ${index + 1} login failed:`, err.message);
+    console.error(`[❌] Bot ${botNum} login failed:`, err.message);
   });
 });
