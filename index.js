@@ -1,4 +1,5 @@
 const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
+const { joinVoiceChannel, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 
 const tokens = [
   "MTU2ODEwOTAxODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc",
@@ -6,6 +7,15 @@ const tokens = [
   "MTU2ODEwNjA3Njk0NjMwMDk1MA" + ".GeS2Ay" + ".beAQzt5Xi9Od7mV-Ft6oma_rZyAkbBHDjO3cU8",
   "MTU2NzQ0MzUyNzIzNzkwMjQw" + "OQ.GjBD19" + ".bR2YRod6ztOW7-zeJ-2PFiNtx0II8F-F6uWGFY",
   "MTU2ODEwNTc5MTY0OTc0MjkxOQ" + ".GRlWpY" + ".MNjtMD8bVVND4cQ24mwhPIX6SU-3BPwF7KnflE"
+];
+
+// استبدل الأرقام دي بـ IDs الرومات الصوتية الخاصة بكل بوت بالترتيب
+const channelIds = [
+  "ضع_آيدي_روم_اركويت_هنا",
+  "ضع_آيدي_روم_بحري_هنا",
+  "ضع_آيدي_روم_الكلاكلة_هنا",
+  "ضع_آيدي_روم_امدرمان_هنا",
+  "ضع_آيدي_روم_شرق_النيل_هنا"
 ];
 
 const statuses = [
@@ -27,17 +37,81 @@ tokens.forEach((token, index) => {
     ]
   });
 
-  client.on('ready', () => {
+  client.on('ready', async () => {
     console.log(`[✔] Bot ${index + 1} is online as ${client.user.tag}`);
     
     client.user.setPresence({
       activities: [{ name: statuses[index], type: ActivityType.Listening }],
       status: 'online',
     });
+
+    // الاتصال التلقائي بالروم الصوتي مع Self-Deafen وحماية ضد الفصل
+    const channelId = channelIds[index];
+    if (!channelId || channelId.startsWith("ضع_")) return;
+
+    try {
+      const channel = await client.channels.fetch(channelId);
+      if (channel && channel.isVoiceBased()) {
+        const connection = joinVoiceChannel({
+          channelId: channel.id,
+          guildId: channel.guild.id,
+          adapterCreator: channel.guild.voiceAdapterCreator,
+          selfDeaf: true, // كتم تلقائي للبوت عشان ما يعملش إزعاج
+          selfMute: false
+        });
+
+        // إعادة الاتصال التلقائي في حال حصل انقطاع
+        connection.on(VoiceConnectionStatus.Disconnected, async () => {
+          try {
+            await Promise.race([
+              entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+              entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
+            ]);
+          } catch (error) {
+            connection.destroy();
+            setTimeout(() => {
+              joinVoiceChannel({
+                channelId: channel.id,
+                guildId: channel.guild.id,
+                adapterCreator: channel.guild.voiceAdapterCreator,
+                selfDeaf: true,
+              });
+            }, 3_000);
+          }
+        });
+
+        console.log(`[🔊] Bot ${index + 1} joined voice channel: ${channel.name}`);
+      }
+    } catch (err) {
+      console.error(`[❌] Bot ${index + 1} failed to join voice channel:`, err.message);
+    }
   });
 
   client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
+
+    // أمر الميوت الجماعي للأعضاء في الروم ما عدا المرسل
+    if (message.content === '!muteall') {
+      const memberChannel = message.member.voice.channel;
+      if (!memberChannel) {
+        return message.reply('❌ يجب أن تكون متصلاً بروم صوتي لتنفيذ هذا الأمر!');
+      }
+
+      try {
+        let mutedCount = 0;
+        for (const [memberId, member] of memberChannel.members) {
+          if (memberId !== message.author.id && !member.user.bot) {
+            await member.voice.setMute(true, 'Requested by ' + message.author.tag);
+            mutedCount++;
+          }
+        }
+        message.reply(`[🔇] تم عمل ميوت لـ ${mutedCount} أعضاء في الروم بنجاح، وتم استثنائك أنت وحدك!`);
+      } catch (err) {
+        console.error('Failed to mute members:', err);
+        message.reply('❌ حدث خطأ أثناء محاولة كتم الأعضاء. تأكد من أن لدى البوت صلاحية Mute Members.');
+      }
+    }
+
     if (message.content === '!ping') {
       message.reply(`Pong from ${client.user.username}! 🏓`);
     }
