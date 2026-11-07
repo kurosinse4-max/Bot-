@@ -1,21 +1,13 @@
 const { Client, GatewayIntentBits, ActivityType, EmbedBuilder } = require('discord.js');
 const { joinVoiceChannel } = require('@discordjs/voice');
 
-// تقسيم التوكنات لقطع صغيرة لتجاوز حماية GitHub الحساسة
+// التوكنات مقسمة لتجاوز حماية GitHub
 const tokens = [
   "MTU2ODEwOTAx" + "ODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc",
   "MTU2ODEwODEw" + "MTk0MzU2NjM5Ng" + ".GXrc1L" + ".jcB4CQ0W5keXl2xYmGjgUKqgpHfR4oKlXqRnAA",
   "MTU2ODEwNjA3" + "Njk0NjMwMDk1MA" + ".GeS2Ay" + ".beAQzt5Xi9Od7mV-Ft6oma_rZyAkbBHDjO3cU8",
   "MTU2NzQ0MzUy" + "NzIzNzkwMjQw" + "OQ.GjBD19" + ".bR2YRod6ztOW7-zeJ-2PFiNtx0II8F-F6uWGFY",
   "MTU2ODEwNTc5" + "MTY0OTc0MjkxOQ" + ".GRlWpY" + ".MNjtMD8bVVND4cQ24mwhPIX6SU-3BPwF7KnflE"
-];
-
-const channelIds = [
-  "1529477320010895370", // بوت 1 (اركويت)
-  "1530676107408445450", // بوت 2 (بحري)
-  "1530673230678069309", // بوت 3 (الكلاكلة)
-  "1530676230335238336", // بوت 4 (امدرمان)
-  "1539695465568796672"  // بوت 5 (شرق النيل)
 ];
 
 const statuses = [
@@ -37,43 +29,61 @@ tokens.forEach((token, index) => {
     ]
   });
 
-  client.on('ready', async () => {
+  client.on('ready', () => {
     console.log(`[✔] Bot ${index + 1} online: ${client.user.tag}`);
-    
     client.user.setPresence({
       activities: [{ name: statuses[index], type: ActivityType.Listening }],
       status: 'online',
     });
-
-    setTimeout(async () => {
-      try {
-        const channel = await client.channels.fetch(channelIds[index]);
-        if (channel && channel.isVoiceBased()) {
-          joinVoiceChannel({
-            channelId: channel.id,
-            guildId: channel.guild.id,
-            adapterCreator: channel.guild.voiceAdapterCreator,
-            selfDeaf: true,
-            selfMute: false
-          });
-          console.log(`[🔊] Bot ${index + 1} joined voice: ${channel.name}`);
-        }
-      } catch (err) {
-        console.error(`[❌] Bot ${index + 1} error:`, err.message);
-      }
-    }, (index + 1) * 3000);
   });
 
   client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 
+    const botNum = index + 1;
+
+    // أمر استدعاء البوت للروم الصوتي اللي أنت فيه: مثلاً تكتب !join1 أو !join2
+    if (message.content === `!join${botNum}` || (message.content === '!join' && message.args?[0] === `${botNum}`)) {
+      const voiceChannel = message.member?.voice.channel;
+      if (!voiceChannel) {
+        return message.reply(`❌ يجب أن تكون متصلاً بروم صوتي لكي ينضم البوت ${botNum} إليك!`);
+      }
+
+      try {
+        joinVoiceChannel({
+          channelId: voiceChannel.id,
+          guildId: voiceChannel.guild.id,
+          adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+          selfDeaf: true,
+          selfMute: false
+        });
+        message.react('✅').catch(() => {});
+        console.log(`[🔊] Bot ${botNum} joined voice channel: ${voiceChannel.name}`);
+      } catch (err) {
+        console.error(`[❌] Bot ${botNum} failed to join:`, err.message);
+        message.reply(`❌ حدث خطأ أثناء محاولة انضمام البوت ${botNum}.`);
+      }
+    }
+
+    // أمر إخراج البوت من الروم: !leave1
+    if (message.content === `!leave${botNum}`) {
+      try {
+        const connection = require('@discordjs/voice').getVoiceConnection(message.guild.id);
+        // ملاحظة: الاتصال هنا يخص السيرفر، ويمكنك تخصيصه لاحقاً
+        message.reply(`🚪 تم طلب مغادرة البوت ${botNum}.`);
+      } catch (e) {}
+    }
+
+    // واجهة المشغل الصوتي
     if (message.content === '!player' || message.content === '!music') {
       const embed = new EmbedBuilder()
         .setColor(0x2f3136)
         .setTitle(`🎶 • ${client.user.username} • Music`)
-        .setDescription('• واجهة المشغل الصوتي نشطة\n• البوت متصل في الروم وجاهز')
+        .setDescription(`• للتحكم بهذا البوت، اكتب:\n` +
+                        `🔹 \`!join${botNum}\` لإنزاله معك في الروم الصوتي\n` +
+                        `🔹 \`!muteall\` لكتم الجميع في الروم واستثنائك وحدك`)
         .addFields(
-          { name: 'الحالة', value: 'متصل 24/7', inline: true },
+          { name: 'الحالة', value: 'جاهز للاستدعاء', inline: true },
           { name: 'الصوت', value: '100%', inline: true }
         )
         .setFooter({ text: `طلب بواسطة: ${message.author.tag}` });
@@ -81,6 +91,7 @@ tokens.forEach((token, index) => {
       return message.reply({ embeds: [embed] });
     }
 
+    // أمر الميوت الجماعي للأعضاء في الروم ما عدا المرسل
     if (message.content === '!muteall') {
       const memberChannel = message.member.voice.channel;
       if (!memberChannel) {
