@@ -34,7 +34,7 @@ botsData.forEach((botInfo, index) => {
           channelId: channel.id,
           guildId: channel.guild.id,
           adapterCreator: channel.guild.voiceAdapterCreator,
-          selfDeaf: !isPlaying, // صامت وثابت افتراضياً، ويفك الديفن لحظة التشغيل
+          selfDeaf: !isPlaying,
           selfMute: false,
           group: `sudanship_${botNum}`
         });
@@ -42,7 +42,6 @@ botsData.forEach((botInfo, index) => {
       } catch (err) {}
     };
 
-    // عند انتهاء الأغنية، يرجع البوت لوضع الصمت والثبات تلقائياً
     player.on(AudioPlayerStatus.Idle, async () => {
       try {
         const channel = await client.channels.fetch(botInfo.channelId);
@@ -78,7 +77,6 @@ botsData.forEach((botInfo, index) => {
       }
     });
 
-    // إرسال اللوحة وتحديثها تلقائياً كل 3 دقائق
     client.on(Events.MessageCreate, async (message) => {
       if (message.author.bot) return;
       const content = message.content.trim().toLowerCase();
@@ -91,7 +89,7 @@ botsData.forEach((botInfo, index) => {
         const embed = new EmbedBuilder()
           .setColor(0x2B2D31)
           .setTitle(`• Sudanship • Music Dashboard [Bot ${botNum}]`)
-          .setDescription(`• مرحباً بك يا عضو Sudanship\n• انقر على زر **محرك بحث Sudanship** لاختيار وتشغيل الأغنية فوراً:`)
+          .setDescription(`• مرحباً بك يا عضو Sudanship\n• انقر على زر **محرك بحث Sudanship** لاختيار وتشغيل الأغنية فوراً[span_1](start_span)[span_1](end_span):`)
           .setFooter({ text: `Sudanship • Professional System (Auto-Refresh)` });
 
         const row = new ActionRowBuilder().addComponents(
@@ -143,10 +141,18 @@ botsData.forEach((botInfo, index) => {
 
         if (interaction.isModalSubmit()) {
           if (interaction.customId === `search_input_modal_${botNum}`) {
-            const query = interaction.fields.getTextInputValue('query_text');
+            // رد مؤقت سريع جداً عشان نتفادى التعليق (is thinking)
             await interaction.deferReply({ ephemeral: true });
+            
+            const query = interaction.fields.getTextInputValue('query_text');
 
-            let searchResults = await play.search(query, { limit: 10 });
+            let searchResults;
+            try {
+              searchResults = await play.search(query, { limit: 5 });
+            } catch (e) {
+              return interaction.editReply({ content: '❌ حدث خطأ في الاتصال بمحرك البحث، حاول مرة أخرى.' });
+            }
+
             if (!searchResults || searchResults.length === 0) {
               return interaction.editReply({ content: '❌ لم يتم العثور على نتائج مطابقة!' });
             }
@@ -180,10 +186,10 @@ botsData.forEach((botInfo, index) => {
           if (interaction.customId === `select_song_menu_${botNum}`) {
             const selectedValue = interaction.values[0];
             const indexMatch = selectedValue.split('_')[2];
-            const song = client.cachedSearchResults[indexMatch];
+            const song = client.cachedSearchResults?.[indexMatch];
 
             if (!song) {
-              return interaction.reply({ content: '❌ حدث خطأ، يرجى إعادة البحث.', ephemeral: true });
+              return interaction.reply({ content: '❌ انتهت صلاحية البحث، يرجى البحث مرة أخرى.', ephemeral: true });
             }
 
             await interaction.update({ content: `🎵 جاري تشغيل: **${song.title}** وبث الصوت في الفويس...`, embeds: [], components: [] });
