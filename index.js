@@ -1,5 +1,6 @@
 const { Client, GatewayIntentBits, ActivityType, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
+const ytdl = require('@distube/ytdl-core');
 const play = require('play-dl');
 
 const botsData = [
@@ -88,12 +89,12 @@ botsData.forEach((botInfo, index) => {
 
         const embed = new EmbedBuilder()
           .setColor(0x2B2D31)
-          .setTitle(`• Sudanship • Smart Audio Dashboard [Bot ${botNum}]`)
-          .setDescription(`• مرحباً بك يا عضو Sudanship\n• انقر على زر **محرك البحث الذكي** (يدعم الأغاني، القرآن، الأناشيد، والروابط):`)
-          .setFooter({ text: `Sudanship • Smart Engine (Auto-Refresh)` });
+          .setTitle(`• Sudanship • Pro Engine [Bot ${botNum}]`)
+          .setDescription(`• مرحباً بك يا مهند في لوحة تحكم Sudanship\n• انقر على زر **محرك البحث الذكي** لتشغيل أي قرآن، أناشيد، أو أغاني:`)
+          .setFooter({ text: `Sudanship • ytdl-core Stable System (Auto-Refresh)` });
 
         const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId(`search_modal_btn_${botNum}`).setStyle(ButtonStyle.Primary).setEmoji('🔍').setLabel('محرك البحث الذكي'),
+          new ButtonBuilder().setCustomId(`search_modal_btn_${botNum}`).setStyle(ButtonStyle.Primary).setEmoji('🔍').setLabel('بحث ذكي وربط مباشر'),
           new ButtonBuilder().setCustomId(`stop_btn_${botNum}`).setStyle(ButtonStyle.Danger).setEmoji('⏹️').setLabel('إيقاف')
         );
 
@@ -116,13 +117,13 @@ botsData.forEach((botInfo, index) => {
           if (interaction.customId === `search_modal_btn_${botNum}`) {
             const modal = new ModalBuilder()
               .setCustomId(`search_input_modal_${botNum}`)
-              .setTitle(`محرك البحث الذكي الشامل`);
+              .setTitle(`محرك البحث الذكي (ytdl-core)`);
 
             const songInput = new TextInputBuilder()
               .setCustomId('query_text')
-              .setLabel('اكتب اسم أو حط رابط (يوتيوب، ساوندكلاود...)')
+              .setLabel('اكتب اسم المقطع أو الرابط هنا')
               .setStyle(TextInputStyle.Short)
-              .setPlaceholder('مثال: سورة البقرة، صولجا، أو رابط...')
+              .setPlaceholder('مثال: سورة البقرة، أناشيد، أو رابط يوتيوب...')
               .setRequired(true);
 
             modal.addComponents(new ActionRowBuilder().addComponents(songInput));
@@ -146,34 +147,41 @@ botsData.forEach((botInfo, index) => {
 
             let searchResults = [];
             try {
-              // محرك ذكي بيبحث في يوتيوب وساوندكلاود معاً لضمان جلب النتائج دائماً
-              let ytResults = await play.search(query, { limit: 5 }).catch(() => []);
-              let scResults = await play.search(query, { source: { soundcloud: "tracks" }, limit: 5 }).catch(() => []);
-              
-              searchResults = [...ytResults, ...scResults];
+              if (ytdl.validateURL(query)) {
+                const info = await ytdl.getInfo(query);
+                searchResults = [{
+                  title: info.videoDetails.title,
+                  url: info.videoDetails.video_url,
+                  channel: { name: info.videoDetails.author.name },
+                  duration: info.videoDetails.lengthSeconds,
+                  thumbnails: info.videoDetails.thumbnails
+                }];
+              } else {
+                searchResults = await play.search(query, { limit: 8 });
+              }
             } catch (e) {
-              console.error("Smart Search error:", e);
+              console.error("Search error:", e);
             }
 
             if (!searchResults || searchResults.length === 0) {
-              return interaction.editReply({ content: '❌ لم يتم العثور على نتائج مطابقة. جرب كتابة اسم أصح أو لصق رابط مباشر.' });
+              return interaction.editReply({ content: '❌ لم يتم العثور على نتائج. تأكد من كتابة الاسم بصورة صحيحة أو ضع رابطاً مباشراً.' });
             }
 
             const embed = new EmbedBuilder()
               .setColor(0x2B2D31)
-              .setTitle(`Smart Results for: ${query}`)
-              .setDescription(searchResults.map((song, i) => `${i + 1}. **${song.title}** - By ${song.channel?.name || song.user?.name || 'Unknown'}`).join('\n'))
-              .setFooter({ text: `حدد مقطوعة للتشغيل من القائمة أدناه` });
+              .setTitle(`Results for: ${query}`)
+              .setDescription(searchResults.map((song, i) => `${i + 1}. **${song.title}** - By ${song.channel?.name || 'Unknown'}`).join('\n'))
+              .setFooter({ text: `حدد مقطوعة للتشغيل الفوري` });
 
             const options = searchResults.map((song, i) => ({
               label: song.title.substring(0, 99),
-              description: `By ${song.channel?.name || song.user?.name || 'Unknown'}`.substring(0, 99),
+              description: `By ${song.channel?.name || 'Unknown'}`.substring(0, 99),
               value: `play_idx_${i}_${botNum}`
             }));
 
             const selectMenu = new StringSelectMenuBuilder()
               .setCustomId(`select_song_menu_${botNum}`)
-              .setPlaceholder('حدد ما تريد تشغيله...')
+              .setPlaceholder('اختر المقطع للتشغيل الفوري...')
               .addOptions(options);
 
             const row = new ActionRowBuilder().addComponents(selectMenu);
@@ -193,7 +201,7 @@ botsData.forEach((botInfo, index) => {
               return interaction.reply({ content: '❌ انتهت صلاحية البحث، يرجى البحث مرة أخرى.', ephemeral: true });
             }
 
-            await interaction.update({ content: `🎵 جاري تشغيل: **${song.title}** وبث الصوت في الفويس...`, embeds: [], components: [] });
+            await interaction.update({ content: `🎵 جاري تشغيل عبر ytdl-core: **${song.title}** في الفويس...`, embeds: [], components: [] });
 
             try {
               const channel = await client.channels.fetch(botInfo.channelId);
@@ -201,30 +209,25 @@ botsData.forEach((botInfo, index) => {
             } catch (e) {}
 
             try {
-              let streamData = await play.stream(song.url);
-              let resource = createAudioResource(streamData.stream, { 
-                inputType: streamData.type,
-                inlineVolume: true 
+              let stream = ytdl(song.url, { 
+                filter: 'audioonly', 
+                quality: 'highestaudio', 
+                highWaterMark: 1 << 25 
               });
+              
+              let resource = createAudioResource(stream, { inlineVolume: true });
               resource.volume.setVolume(1.0);
               player.play(resource);
             } catch (streamErr) {
-              try {
-                // محاولة بديلة لو حصل خطأ في الدفق
-                let scStream = await play.stream_from_info(song.url);
-                let resource = createAudioResource(scStream.stream, { inputType: scStream.type, inlineVolume: true });
-                resource.volume.setVolume(1.0);
-                player.play(resource);
-              } catch (err2) {
-                return interaction.channel.send({ content: `❌ عذراً، تعذر تشغيل هذا المقطع نظراً لحماية المصدر.` });
-              }
+              console.error("ytdl Stream error:", streamErr);
+              return interaction.channel.send({ content: `❌ عذراً، حدث خطأ أثناء بث الصوت عبر ytdl-core.` });
             }
 
             const playingEmbed = new EmbedBuilder()
               .setColor(0x2B2D31)
-              .setTitle(`▶️ • يُشغّل الآن في الفويس`)
-              .setDescription(`**[${song.title}](${song.url})**\n\n🎙️ **المصدر:** ${song.channel?.name || song.user?.name || 'Sudanship'}\n\n🔊 **مستوى الصوت:** 100%`)
-              .setImage(song.thumbnails?.[0]?.url || song.thumbnail || 'https://i.imgur.com/3g7X7Q8.png')
+              .setTitle(`▶️ • يُشغّل الآن في الفويس (ytdl-core)`)
+              .setDescription(`**[${song.title}](${song.url})**\n\n🎙️ **القناة:** ${song.channel?.name || 'Sudanship'}\n\n🔊 **مستوى الصوت:** 100%`)
+              .setImage(song.thumbnails?.[0]?.url || 'https://i.imgur.com/3g7X7Q8.png')
               .setFooter({ text: `Playing by: @${interaction.user.tag}` });
 
             const controlRow = new ActionRowBuilder().addComponents(
