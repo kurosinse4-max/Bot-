@@ -205,7 +205,7 @@ botsData.forEach((botInfo, index) => {
 
             try {
               const channel = await client.channels.fetch(botInfo.channelId);
-              if (channel) connectToVoice(channel, true);
+            if (channel) connectToVoice(channel, true);
             } catch (e) {}
 
             try {
