@@ -89,12 +89,12 @@ botsData.forEach((botInfo, index) => {
 
         const embed = new EmbedBuilder()
           .setColor(0x2B2D31)
-          .setTitle(`• Sudanship • Ultimate Dashboard [Bot ${botNum}]`)
-          .setDescription(`• مرحباً بك يا مهند\n• انقر على زر **بحث ذكي** لتشغيل أي قرآن، أناشيد، أو أغاني:`)
-          .setFooter({ text: `Sudanship • Stable Engine (Auto-Refresh)` });
+          .setTitle(`• Sudanship • Music Dashboard [Bot ${botNum}]`)
+          .setDescription(`• مرحباً بك يا عضو Sudanship\n• انقر على زر **محرك Sudanship** لتشغيل أي قرآن، أناشيد، أو أغاني:`)
+          .setFooter({ text: `Sudanship • Professional System (Auto-Refresh)` });
 
         const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId(`search_modal_btn_${botNum}`).setStyle(ButtonStyle.Primary).setEmoji('🔍').setLabel('بحث ذكي'),
+          new ButtonBuilder().setCustomId(`search_modal_btn_${botNum}`).setStyle(ButtonStyle.Primary).setEmoji('🔍').setLabel('محرك Sudanship'),
           new ButtonBuilder().setCustomId(`stop_btn_${botNum}`).setStyle(ButtonStyle.Danger).setEmoji('⏹️').setLabel('إيقاف')
         );
 
@@ -117,13 +117,13 @@ botsData.forEach((botInfo, index) => {
           if (interaction.customId === `search_modal_btn_${botNum}`) {
             const modal = new ModalBuilder()
               .setCustomId(`search_input_modal_${botNum}`)
-              .setTitle(`محرك البحث الذكي الشامل`);
+              .setTitle(`محرك Sudanship الشامل`);
 
             const songInput = new TextInputBuilder()
               .setCustomId('query_text')
-              .setLabel('اكتب اسم المقطع أو الرابط هنا')
+              .setLabel('اكتب ما تريد البحث عنه للتشغيل الفوري')
               .setStyle(TextInputStyle.Short)
-              .setPlaceholder('مثال: سورة البقرة، أناشيد، أو رابط...')
+              .setPlaceholder('مثال: قرآن، أناشيد، أغاني...')
               .setRequired(true);
 
             modal.addComponents(new ActionRowBuilder().addComponents(songInput));
@@ -147,41 +147,33 @@ botsData.forEach((botInfo, index) => {
 
             let searchResults = [];
             try {
-              if (ytdl.validateURL(query)) {
-                const info = await ytdl.getInfo(query);
-                searchResults = [{
-                  title: info.videoDetails.title,
-                  url: info.videoDetails.video_url,
-                  channel: { name: info.videoDetails.author.name },
-                  duration: info.videoDetails.lengthSeconds,
-                  thumbnails: info.videoDetails.thumbnails
-                }];
-              } else {
-                searchResults = await play.search(query, { limit: 8 });
-              }
+              // بحث شامل يجمع بين يوتيوب وساوندكلاود لضمان ظهور النتائج دائماً
+              let ytResults = await play.search(query, { limit: 5 }).catch(() => []);
+              let scResults = await play.search(query, { source: { soundcloud: "tracks" }, limit: 5 }).catch(() => []);
+              searchResults = [...ytResults, ...scResults];
             } catch (e) {
               console.error("Search error:", e);
             }
 
             if (!searchResults || searchResults.length === 0) {
-              return interaction.editReply({ content: '❌ لم يتم العثور على نتائج. تأكد من صحة البحث أو الرابط.' });
+              return interaction.editReply({ content: '❌ لم يتم العثور على نتائج. تأكد من كتابة الاسم بصورة صحيحة.' });
             }
 
             const embed = new EmbedBuilder()
               .setColor(0x2B2D31)
               .setTitle(`Results for: ${query}`)
-              .setDescription(searchResults.map((song, i) => `${i + 1}. **${song.title}** - By ${song.channel?.name || 'Unknown'}`).join('\n'))
-              .setFooter({ text: `حدد مقطوعة للتشغيل الفوري` });
+              .setDescription(searchResults.map((song, i) => `${i + 1}. **${song.title}** - By ${song.channel?.name || song.user?.name || 'Unknown'}`).join('\n'))
+              .setFooter({ text: `حدد مقطوعة للتشغيل من القائمة أدناه` });
 
             const options = searchResults.map((song, i) => ({
               label: song.title.substring(0, 99),
-              description: `By ${song.channel?.name || 'Unknown'}`.substring(0, 99),
+              description: `By ${song.channel?.name || song.user?.name || 'Unknown'}`.substring(0, 99),
               value: `play_idx_${i}_${botNum}`
             }));
 
             const selectMenu = new StringSelectMenuBuilder()
               .setCustomId(`select_song_menu_${botNum}`)
-              .setPlaceholder('اختر المقطع للتشغيل...')
+              .setPlaceholder('حدد ما تريد تشغيله من القائمة...')
               .addOptions(options);
 
             const row = new ActionRowBuilder().addComponents(selectMenu);
@@ -201,33 +193,36 @@ botsData.forEach((botInfo, index) => {
               return interaction.reply({ content: '❌ انتهت صلاحية البحث، يرجى البحث مرة أخرى.', ephemeral: true });
             }
 
-            await interaction.update({ content: `🎵 جاري تشغيل: **${song.title}** في الفويس...`, embeds: [], components: [] });
+            await interaction.update({ content: `🎵 جاري تشغيل وبث: **${song.title}** في الفويس...`, embeds: [], components: [] });
 
             try {
               const channel = await client.channels.fetch(botInfo.channelId);
-            if (channel) connectToVoice(channel, true);
+              if (channel) connectToVoice(channel, true);
             } catch (e) {}
 
             try {
-              let stream = ytdl(song.url, { 
-                filter: 'audioonly', 
-                quality: 'highestaudio', 
-                highWaterMark: 1 << 25 
-              });
-              
+              // محاولة التشغيل عبر ytdl-core أولاً
+              let stream = ytdl(song.url, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1 << 25 });
               let resource = createAudioResource(stream, { inlineVolume: true });
               resource.volume.setVolume(1.0);
               player.play(resource);
             } catch (streamErr) {
-              console.error("Stream error:", streamErr);
-              return interaction.channel.send({ content: `❌ عذراً، حدث خطأ أثناء تشغيل المقطع.` });
+              try {
+                // لو حصل حظر من يوتيوب، التحول التلقائي لـ play-dl / SoundCloud لتجاوز الحظر فوراً
+                let streamData = await play.stream(song.url);
+                let resource = createAudioResource(streamData.stream, { inputType: streamData.type, inlineVolume: true });
+                resource.volume.setVolume(1.0);
+                player.play(resource);
+              } catch (err2) {
+                return interaction.channel.send({ content: `❌ عذراً، تعذر تشغيل هذا المقطع نظراً لقيود المصدر، جرب مقطعاً آخر.` });
+              }
             }
 
             const playingEmbed = new EmbedBuilder()
               .setColor(0x2B2D31)
               .setTitle(`▶️ • يُشغّل الآن في الفويس`)
-              .setDescription(`**[${song.title}](${song.url})**\n\n🎙️ **القناة:** ${song.channel?.name || 'Sudanship'}\n\n🔊 **مستوى الصوت:** 100%`)
-              .setImage(song.thumbnails?.[0]?.url || 'https://i.imgur.com/3g7X7Q8.png')
+              .setDescription(`**[${song.title}](${song.url})**\n\n🎙️ **المصدر:** ${song.channel?.name || song.user?.name || 'Sudanship'}\n\n🔊 **مستوى الصوت:** 100%`)
+              .setImage(song.thumbnails?.[0]?.url || song.thumbnail || 'https://i.imgur.com/3g7X7Q8.png')
               .setFooter({ text: `Playing by: @${interaction.user.tag}` });
 
             const controlRow = new ActionRowBuilder().addComponents(
