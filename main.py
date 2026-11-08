@@ -8,11 +8,18 @@ for package in ['discord.py[voice]', 'PyNaCl', 'yt-dlp']:
         subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
 import asyncio
+import warnings
+import aiohttp
+
+# منع ظهور تحذيرات الـ aiohttp المزعجة في اللوج
+warnings.filterwarnings("ignore", category=ResourceWarning)
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 import discord
 from discord.ext import commands
 import yt_dlp
 
-# أسطول الـ 15 بوت كاملاً مع حماية الرومات وإعادة الاتصال التلقائي
+# أسطول الـ 15 بوت كاملاً مع الحماية الصارمة وإدارة الاتصالات النظيفة
 bots_data = [
     {"token": "MTU2ODEwOTAx" + "ODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc", "channel_id": 1529477320010895370, "status": "Sudanship Music 1"},
     {"token": "MTU2ODEwODEw" + "MTk0MzU2NjM5Ng" + ".GXrc1L" + ".jcB4CQ0W5keXl2xYmGjgUKqgpHfR4oKlXqRnAA", "channel_id": 1530676107408445450, "status": "Sudanship Music 2"},
@@ -190,13 +197,12 @@ async def run_bot(bot_info, bot_num):
         except Exception as e:
             print(f"Auto join error for bot {bot_num}: {e}")
 
-    # حماية صارمة ضد الطرد أو النقل أو الخروج وإعادة الاتصال الفوري
+    # حماية صارمة ضد الطرد وإعادة الاتصال الفوري
     @bot.event
     async def on_voice_state_update(member, before, after):
         if member.id == bot.user.id:
-            # إذا خرج البوت أو تم طرده أو نقله بالغلط
             if before.channel is not None and (after.channel is None or after.channel.id != bot_info["channel_id"]):
-                await asyncio.sleep(1) # انتظار بسيط لضمان الاستقرار
+                await asyncio.sleep(1)
                 try:
                     channel = bot.get_channel(bot_info["channel_id"])
                     if channel and isinstance(channel, discord.VoiceChannel):
