@@ -20,14 +20,18 @@ bots_data = [
     {"token": "MTU2ODEwNTc5" + "MTY0OTc0MjkxOQ" + ".GRlWpY" + ".MNjtMD8bVVND4cQ24mwhPIX6SU-3BPwF7KnflE", "channel_id": 1539695465568796672, "status": "Sudanship Stream"}
 ]
 
-# إعدادات متقدمة جداً لضمان جلب واستخراج الصوت بدون أخطاء
-YDL_OPTIONS = {
+YDL_SEARCH_OPTIONS = {
+    'format': 'bestaudio',
+    'default_search': 'ytsearch5',
+    'noplaylist': True,
+    'quiet': True,
+    'extract_flat': True
+}
+
+YDL_PLAY_OPTIONS = {
     'format': 'bestaudio/best',
     'noplaylist': True,
-    'skip_download': True,
-    'cookiefile': None,
-    'default_search': 'ytsearch',
-    'source_address': '0.0.0.0'
+    'quiet': True
 }
 
 FFMPEG_OPTIONS = {
@@ -54,7 +58,12 @@ class SongSelectView(discord.ui.View):
         await interaction.response.defer(ephemeral=True)
         selected_index = int(self.select_menu.values[0])
         track = self.tracks[selected_index]
-        url = track.get('url') or track.get('webpage_url')
+        
+        # التأكد من جلب رابط صالح للمقطع
+        url = track.get('url')
+        if not url and 'id' in track:
+            url = f"https://www.youtube.com/watch?v={track['id']}"
+            
         title = track.get('title', 'مقطع صوتي')
 
         voice_channel_id = bots_data[self.bot_num - 1]["channel_id"]
@@ -70,15 +79,14 @@ class SongSelectView(discord.ui.View):
             if vc.is_playing():
                 vc.stop()
 
-            # استخراج الرابط المباشر الصافي للصوت
-            with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
+            with yt_dlp.YoutubeDL(YDL_PLAY_OPTIONS) as ydl:
                 info = ydl.extract_info(url, download=False)
                 if 'entries' in info:
                     info = info['entries'][0]
                 audio_url = info.get('url')
 
             if not audio_url:
-                return await interaction.followup.send("❌ تعذر جلب رابط الصوت المباشر.", ephemeral=True)
+                return await interaction.followup.send("❌ تعذر استخراج رابط البث الصوتي.", ephemeral=True)
 
             audio_source = discord.FFmpegPCMAudio(audio_url, **FFMPEG_OPTIONS)
             vc.play(audio_source)
@@ -113,13 +121,12 @@ class SearchModal(discord.ui.Modal, title="محرك Sudanship الذكي"):
         query = self.query_input.value
 
         try:
-            search_query = f"ytsearch5:{query}"
-            with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
-                info = ydl.extract_info(search_query, download=False)
+            with yt_dlp.YoutubeDL(YDL_SEARCH_OPTIONS) as ydl:
+                info = ydl.extract_info(query, download=False)
                 tracks = info.get('entries', [])
 
             if not tracks:
-                return await interaction.followup.send("❌ لم يتم العثور على نتائج.", ephemeral=True)
+                return await interaction.followup.send("❌ لم يتم العثور على نتائج بحث مطابقة.", ephemeral=True)
 
             view = SongSelectView(tracks, self.bot_num)
             embed = discord.Embed(
@@ -131,7 +138,7 @@ class SearchModal(discord.ui.Modal, title="محرك Sudanship الذكي"):
 
         except Exception as e:
             print(f"Search error: {e}")
-            await interaction.followup.send("❌ حدث خطأ أثناء عملية البحث.", ephemeral=True)
+            await interaction.followup.send("❌ حدث خطأ أثناء البحث، جرب مرة أخرى.", ephemeral=True)
 
 
 class MusicControlView(discord.ui.View):
