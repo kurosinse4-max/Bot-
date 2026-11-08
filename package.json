@@ -9,8 +9,8 @@
   "dependencies": {
     "@discordjs/opus": "^0.10.0",
     "@discordjs/voice": "^0.17.0",
-    "@distube/ytdl-core": "^1.5.1",
     "discord.js": "^14.14.1",
-    "play-dl": "^1.9.7"
+    "play-dl": "^1.9.7",
+    "ytdl-core": "github:distubejs/ytdl-core"
   }
 }
