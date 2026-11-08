@@ -122,7 +122,7 @@ botsData.forEach((botInfo, index) => {
               .setCustomId('query_text')
               .setLabel('اكتب ما تريد البحث عنه للتشغيل الفوري')
               .setStyle(TextInputStyle.Short)
-              .setPlaceholder('مثال: قرآن، أناشيد، أغاني...') // تم التعديل وإزالة سولجا نهائياً
+              .setPlaceholder('مثال: قرآن، أناشيد، أغاني...')
               .setRequired(true);
 
             modal.addComponents(new ActionRowBuilder().addComponents(songInput));
@@ -189,21 +189,26 @@ botsData.forEach((botInfo, index) => {
               return interaction.reply({ content: '❌ انتهت صلاحية البحث، يرجى البحث مرة أخرى.', ephemeral: true });
             }
 
-            await interaction.update({ content: `🎵 جاري تشغيل: **${song.title}** في الفويس...`, embeds: [], components: [] });
+            await interaction.update({ content: `🎵 جاري تشغيل: **${song.title}** وبث الصوت في الفويس...`, embeds: [], components: [] });
 
             try {
               const channel = await client.channels.fetch(botInfo.channelId);
               if (channel) connectToVoice(channel, true);
             } catch (e) {}
 
-            let stream = await play.stream(song.url);
-            let resource = createAudioResource(stream.stream, { 
-              inputType: stream.type,
-              inlineVolume: true 
-            });
-            resource.volume.setVolume(1.0);
-
-            player.play(resource);
+            try {
+              // طريقة آمنة ومستقرة لجلب الدفق الصوتي وتخطي الحظر
+              let streamData = await play.stream(song.url);
+              let resource = createAudioResource(streamData.stream, { 
+                inputType: streamData.type,
+                inlineVolume: true 
+              });
+              resource.volume.setVolume(1.0);
+              player.play(resource);
+            } catch (streamErr) {
+              console.error("Stream playback error:", streamErr);
+              return interaction.channel.send({ content: `❌ حدث خطأ أثناء بث الصوت للرابط: ${song.title}` });
+            }
 
             const playingEmbed = new EmbedBuilder()
               .setColor(0x2B2D31)
