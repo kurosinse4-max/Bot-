@@ -89,7 +89,7 @@ botsData.forEach((botInfo, index) => {
         const embed = new EmbedBuilder()
           .setColor(0x2B2D31)
           .setTitle(`• Sudanship • Music Dashboard [Bot ${botNum}]`)
-          .setDescription(`• مرحباً بك يا عضو Sudanship\n• انقر على زر **محرك بحث Sudanship** لاختيار وتشغيل الأغنية فوراً[span_1](start_span)[span_1](end_span):`)
+          .setDescription(`• مرحباً بك يا عضو Sudanship\n• انقر على زر **محرك بحث Sudanship** (قرآن، أناشيد، أغاني):`)
           .setFooter({ text: `Sudanship • Professional System (Auto-Refresh)` });
 
         const row = new ActionRowBuilder().addComponents(
@@ -116,13 +116,13 @@ botsData.forEach((botInfo, index) => {
           if (interaction.customId === `search_modal_btn_${botNum}`) {
             const modal = new ModalBuilder()
               .setCustomId(`search_input_modal_${botNum}`)
-              .setTitle(`محرك بحث Sudanship الذكي`);
+              .setTitle(`محرك بحث Sudanship الشامل`);
 
             const songInput = new TextInputBuilder()
               .setCustomId('query_text')
-              .setLabel('اكتب اسم الأغنية هنا للبحث الفوري')
+              .setLabel('اكتب ما تريد البحث عنه للتشغيل الفوري')
               .setStyle(TextInputStyle.Short)
-              .setPlaceholder('مثال: Soulja أو Rema...')
+              .setPlaceholder('مثال: قرآن، أناشيد، أغاني...') // تم التعديل وإزالة سولجا نهائياً
               .setRequired(true);
 
             modal.addComponents(new ActionRowBuilder().addComponents(songInput));
@@ -135,26 +135,24 @@ botsData.forEach((botInfo, index) => {
               const channel = await client.channels.fetch(botInfo.channelId);
               if (channel) connectToVoice(channel, false);
             } catch (e) {}
-            return await interaction.update({ content: '⏹️ تم إيقاف الموسيقى وإعادة البوت لوضعه الصامت.', embeds: [], components: [] });
+            return await interaction.update({ content: '⏹️ تم إيقاف الصوت وإعادة البوت لوضعه الصامت.', embeds: [], components: [] });
           }
         }
 
         if (interaction.isModalSubmit()) {
           if (interaction.customId === `search_input_modal_${botNum}`) {
-            // رد مؤقت سريع جداً عشان نتفادى التعليق (is thinking)
             await interaction.deferReply({ ephemeral: true });
-            
             const query = interaction.fields.getTextInputValue('query_text');
 
             let searchResults;
             try {
-              searchResults = await play.search(query, { limit: 5 });
+              searchResults = await play.search(query, { limit: 10 });
             } catch (e) {
-              return interaction.editReply({ content: '❌ حدث خطأ في الاتصال بمحرك البحث، حاول مرة أخرى.' });
+              console.error("Search error:", e);
             }
 
             if (!searchResults || searchResults.length === 0) {
-              return interaction.editReply({ content: '❌ لم يتم العثور على نتائج مطابقة!' });
+              return interaction.editReply({ content: '❌ لم يتم العثور على نتائج. تأكد من كتابة الاسم بصورة صحيحة.' });
             }
 
             const embed = new EmbedBuilder()
@@ -171,11 +169,10 @@ botsData.forEach((botInfo, index) => {
 
             const selectMenu = new StringSelectMenuBuilder()
               .setCustomId(`select_song_menu_${botNum}`)
-              .setPlaceholder('حدد مقطوعة للتشغيل...')
+              .setPlaceholder('حدد ما تريد تشغيله من القائمة...')
               .addOptions(options);
 
             const row = new ActionRowBuilder().addComponents(selectMenu);
-
             client.cachedSearchResults = searchResults;
 
             return interaction.editReply({ content: null, embeds: [embed], components: [row] });
@@ -192,7 +189,7 @@ botsData.forEach((botInfo, index) => {
               return interaction.reply({ content: '❌ انتهت صلاحية البحث، يرجى البحث مرة أخرى.', ephemeral: true });
             }
 
-            await interaction.update({ content: `🎵 جاري تشغيل: **${song.title}** وبث الصوت في الفويس...`, embeds: [], components: [] });
+            await interaction.update({ content: `🎵 جاري تشغيل: **${song.title}** في الفويس...`, embeds: [], components: [] });
 
             try {
               const channel = await client.channels.fetch(botInfo.channelId);
@@ -211,7 +208,7 @@ botsData.forEach((botInfo, index) => {
             const playingEmbed = new EmbedBuilder()
               .setColor(0x2B2D31)
               .setTitle(`▶️ • يُشغّل الآن في الفويس`)
-              .setDescription(`**[${song.title}](${song.url})**\n\n🎙️ **الفنان:** ${song.channel?.name || 'Sudanship'}\n\n🔊 **مستوى الصوت:** 100%`)
+              .setDescription(`**[${song.title}](${song.url})**\n\n🎙️ **المصدر:** ${song.channel?.name || 'Sudanship'}\n\n🔊 **مستوى الصوت:** 100%`)
               .setImage(song.thumbnails[0]?.url || 'https://i.imgur.com/3g7X7Q8.png')
               .setFooter({ text: `Playing by: @${interaction.user.tag}` });
 
