@@ -26,7 +26,7 @@ botsData.forEach((botInfo, index) => {
 
     let currentConnection = null;
     const player = createAudioPlayer();
-    let activePanelMessage = null; // لتخزين رسالة اللوحة الحالية ومسحها لاحقاً
+    let activePanelMessage = null;
 
     const connectToVoice = (channel, isPlaying = false) => {
       try {
@@ -34,15 +34,16 @@ botsData.forEach((botInfo, index) => {
           channelId: channel.id,
           guildId: channel.guild.id,
           adapterCreator: channel.guild.voiceAdapterCreator,
-          selfDeaf: !isPlaying, // صامت وثابت افتراضياً، ويفك الديفن لحظة التشغيل
+          selfDeaf: !isPlaying,
           selfMute: false,
           group: `sudanship_${botNum}`
         });
         currentConnection.subscribe(player);
-      } catch (err) {}
+      } catch (err) {
+        console.error(`Voice error on bot ${botNum}:`, err);
+      }
     };
 
-    // عند انتهاء الأغنية، يرجع البوت لوضع الصمت والثبات وتختفي اللوحة
     player.on(AudioPlayerStatus.Idle, async () => {
       try {
         const channel = await client.channels.fetch(botInfo.channelId);
@@ -78,7 +79,6 @@ botsData.forEach((botInfo, index) => {
       }
     });
 
-    // إرسال اللوحة وتحديثها تلقائياً كل 3 دقائق ومسح القديمة
     client.on(Events.MessageCreate, async (message) => {
       if (message.author.bot) return;
       const content = message.content.trim().toLowerCase();
@@ -101,7 +101,6 @@ botsData.forEach((botInfo, index) => {
 
         activePanelMessage = await message.reply({ embeds: [embed], components: [row] });
 
-        // تفعيل التحديث التلقائي كل 3 دقائق (180,000 ملي ثانية) لمسح القديمة وإرسال جديدة
         setInterval(async () => {
           try {
             if (activePanelMessage) {
@@ -187,19 +186,20 @@ botsData.forEach((botInfo, index) => {
               return interaction.reply({ content: '❌ حدث خطأ، يرجى إعادة البحث.', ephemeral: true });
             }
 
-            await interaction.update({ content: `🎵 جاري تشغيل: **${song.title}** في الفويس...`, embeds: [], components: [] });
+            await interaction.update({ content: `🎵 جاري تشغيل: **${song.title}** وبث الصوت في الفويس...`, embeds: [], components: [] });
 
             try {
               const channel = await client.channels.fetch(botInfo.channelId);
               if (channel) connectToVoice(channel, true);
             } catch (e) {}
 
+            // جلب تدفق الصوت الحقيقي عبر play-dl مع تمرير خيارات البث الواضحة
             let stream = await play.stream(song.url);
             let resource = createAudioResource(stream.stream, { 
               inputType: stream.type,
               inlineVolume: true 
             });
-            resource.volume.setVolume(1.0);
+            resource.volume.setVolume(1.0); // ضبط الصوت 100%
 
             player.play(resource);
 
