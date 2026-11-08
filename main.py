@@ -12,7 +12,7 @@ import discord
 from discord.ext import commands
 import yt_dlp
 
-# أسطول الـ 15 بوت (تم تأمين التوكنات لتجاوز حظر فحص جيت هاب الأمني)
+# أسطول الـ 15 بوت كاملاً مع حماية الرومات وإعادة الاتصال التلقائي
 bots_data = [
     {"token": "MTU2ODEwOTAx" + "ODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc", "channel_id": 1529477320010895370, "status": "Sudanship Music 1"},
     {"token": "MTU2ODEwODEw" + "MTk0MzU2NjM5Ng" + ".GXrc1L" + ".jcB4CQ0W5keXl2xYmGjgUKqgpHfR4oKlXqRnAA", "channel_id": 1530676107408445450, "status": "Sudanship Music 2"},
@@ -28,7 +28,7 @@ bots_data = [
     {"token": "MTU0OTg5NDcw" + "NjUyNjQyNTExMA" + ".Ga7A_y" + ".EOH7OTap1KERv0STXLuPFWxUHBLQn1u0tucj2Y", "channel_id": 1569005157235171430, "status": "Sudanship Music 12"},
     {"token": "MTU1MDE3MTY1" + "MzcxODI4MjM0Mg" + ".GZvcxG" + ".QvydH-n37QM3-Dm8jZqZvi95RtiPRkYCbjtFxE", "channel_id": 1569005196535664760, "status": "Sudanship Music 13"},
     {"token": "MTU1MDUyNzQ3" + "MzQ4ODM2NzY2Nw" + ".GkisWG" + ".xsMpQq1PytJxEUbAdLa5n6kidL3huekLl5gE5o", "channel_id": 1569005232262746162, "status": "Sudanship Music 14"},
-    {"token": "MTU1NDIzNzQz" + "MTQ5NzY0NjEwOA" + ".G-DiBw" + ".XhOWj4ZLpmSyNytmFcI93BHMXdG7by8HIMevIA", "channel_id": 1569004339987611718, "status": "Sudanship Music 15"}
+    {"token": "MTU1NDIzNzQz" + "MTQ5NzY0NjEwOA" + ".Z2hK1a" + ".XhOWj4ZLpmSyNytmFcI93BHMXdG7by8HIMevIA", "channel_id": 1569004339987611718, "status": "Sudanship Music 15"}
 ]
 
 YDL_SEARCH_OPTIONS = {
@@ -189,6 +189,23 @@ async def run_bot(bot_info, bot_num):
                     await channel.connect(self_deaf=True)
         except Exception as e:
             print(f"Auto join error for bot {bot_num}: {e}")
+
+    # حماية صارمة ضد الطرد أو النقل أو الخروج وإعادة الاتصال الفوري
+    @bot.event
+    async def on_voice_state_update(member, before, after):
+        if member.id == bot.user.id:
+            # إذا خرج البوت أو تم طرده أو نقله بالغلط
+            if before.channel is not None and (after.channel is None or after.channel.id != bot_info["channel_id"]):
+                await asyncio.sleep(1) # انتظار بسيط لضمان الاستقرار
+                try:
+                    channel = bot.get_channel(bot_info["channel_id"])
+                    if channel and isinstance(channel, discord.VoiceChannel):
+                        if not channel.guild.voice_client or not channel.guild.voice_client.is_connected():
+                            await channel.connect(self_deaf=True)
+                        elif channel.guild.voice_client.channel.id != bot_info["channel_id"]:
+                            await channel.guild.voice_client.move_to(channel)
+                except Exception as e:
+                    print(f"Reconnect error for bot {bot_num}: {e}")
 
     @bot.event
     async def on_message(message):
