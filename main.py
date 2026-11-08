@@ -11,7 +11,7 @@ bots_data = [
     {"token": "MTU2ODEwNTc5" + "MTY0OTc0MjkxOQ" + ".GRlWpY" + ".MNjtMD8bVVND4cQ24mwhPIX6SU-3BPwF7KnflE", "channel_id": 1539695465568796672, "status": "Sudanship Stream"}
 ]
 
-# رابط بث مباشر ثابت وآمن 100% (مثال: إذاعة القرآن الكريم أو رابط صوتي مباشر بصيغة MP3)
+# رابط بث مباشر ثابت وآمن 100% (إذاعة القرآن الكريم)
 DIRECT_STREAM_URL = "https://stream.radiojar.com/8s5u5tpwz3zuv"
 
 class MusicControlView(discord.ui.View):
@@ -20,7 +20,7 @@ class MusicControlView(discord.ui.View):
         self.bot_num = bot_num
 
     @discord.ui.button(label="محرك Sudanship", style=discord.ButtonStyle.primary, emoji="🔍", custom_id="sudanship_play_btn")
-    chno_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def play_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
         
         voice_channel_id = bots_data[self.bot_num - 1]["channel_id"]
@@ -30,14 +30,12 @@ class MusicControlView(discord.ui.View):
             return await interaction.followup.send("❌ لم يتم العثور على الروم الصوتي المحدد للبوت.", ephemeral=True)
 
         try:
-            # الاتصال بالفويس تشات
             if interaction.guild.voice_client:
                 await interaction.guild.voice_client.move_to(channel)
                 vc = interaction.guild.voice_client
             else:
                 vc = await channel.connect(self_deaf=True)
 
-            # تشغيل البث المباشر الصوتي عبر FFmpeg
             if vc.is_playing():
                 vc.stop()
 
@@ -50,7 +48,6 @@ class MusicControlView(discord.ui.View):
             vc.play(audio_source)
             await interaction.followup.send("🎵 تم تشغيل محرك Sudanship وبث الصوت في الروم بنجاح!", ephemeral=True)
             
-            # إرسال رسالة تفاعلية بالمقطع الحالي
             embed = discord.Embed(
                 title="▶️ • يُشغّل الآن في الفويس (محرك Sudanship)",
                 description="**بث مباشر / إذاعة القرآن الكريم**\n\n🎙️ **النظام:** Python FFmpeg Engine\n\n🔊 **مستوى الصوت:** 100%",
@@ -84,7 +81,6 @@ async def run_bot(bot_info, bot_num):
         print(f"[✔] Sudanship Python Bot {bot_num} is online as {bot.user}")
         await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=bot_info["status"]))
         
-        # التلقائي بالدخول للروم الصوتي صامتاً عند الإقلاع
         await asyncio.sleep(5)
         try:
             channel = bot.get_channel(bot_info["channel_id"])
