@@ -6,9 +6,9 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "discord.js": "^14.14.0",
-    "@discordjs/voice": "^0.17.0",
-    "play-dl": "^1.9.7",
-    "opusscript": "^0.1.5"
+    "discord.js": "14.14.0",
+    "@discordjs/voice": "0.17.0",
+    "play-dl": "1.9.7",
+    "opusscript": "0.1.5"
   }
 }
