@@ -1,5 +1,5 @@
 const { Client, GatewayIntentBits, ActivityType, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, StreamType } = require('@discordjs/voice');
 const play = require('play-dl');
 
 const botsData = [
@@ -27,14 +27,21 @@ botsData.forEach((botInfo, index) => {
     let currentConnection = null;
     const player = createAudioPlayer();
 
-    // تشغيل المشغل الصوتي ومعالجة الأخطاء
-    player.on(AudioPlayerStatus.Playing, () => {
-      console.log(`[🔊] Bot ${botNum} is now playing audio in voice channel.`);
-    });
-
-    player.on('error', error => {
-      console.error(`[❌] Audio error on bot ${botNum}:`, error.message);
-    });
+    const connectToVoice = (channel, isPlaying = false) => {
+      try {
+        currentConnection = joinVoiceChannel({
+          channelId: channel.id,
+          guildId: channel.guild.id,
+          adapterCreator: channel.guild.voiceAdapterCreator,
+          selfDeaf: !isPlaying,
+          selfMute: false,
+          group: `sudanship_${botNum}`
+        });
+        currentConnection.subscribe(player);
+      } catch (err) {
+        console.error(`Voice connection error on bot ${botNum}:`, err);
+      }
+    };
 
     client.once(Events.ClientReady, async (c) => {
       console.log(`[✔] Sudanship Bot ${botNum} is online.`);
@@ -43,63 +50,42 @@ botsData.forEach((botInfo, index) => {
         status: 'online',
       });
 
-      // الاتصال بالروم الصوتي وفك الديفن (البوت يدخل وهو غير صامت وغير معزول)
       setTimeout(async () => {
         try {
           const channel = await c.channels.fetch(botInfo.channelId);
           if (channel && channel.isVoiceBased()) {
-            currentConnection = joinVoiceChannel({
-              channelId: channel.id,
-              guildId: channel.guild.id,
-              adapterCreator: channel.guild.voiceAdapterCreator,
-              selfDeaf: false, // لضمان سماع الصوت بوضوح
-              selfMute: false,
-              group: `sudanship_${botNum}`
-            });
-            currentConnection.subscribe(player);
+            connectToVoice(channel, false);
           }
         } catch (err) {}
       }, 4000);
     });
 
-    // حماية تامة ضد الطرد أو التحريك من الروم
     client.on(Events.VoiceStateUpdate, (oldState, newState) => {
       if (newState.member?.id === client.user.id && !newState.channelId) {
         setTimeout(async () => {
           try {
             const channel = await client.channels.fetch(botInfo.channelId);
-            if (channel) {
-              currentConnection = joinVoiceChannel({
-                channelId: channel.id,
-                guildId: channel.guild.id,
-                adapterCreator: channel.guild.voiceAdapterCreator,
-                selfDeaf: false,
-                selfMute: false,
-                group: `sudanship_${botNum}`
-              });
-              currentConnection.subscribe(player);
-            }
+            if (channel) connectToVoice(channel, false);
           } catch (e) {}
         }, 500);
       }
     });
 
-    // إرسال اللوحة الرئيسية بأزرار المنصات (يوتيوب، سبوتفاي، ساوندكلاود)
     client.on(Events.MessageCreate, async (message) => {
       if (message.author.bot) return;
       const content = message.content.trim().toLowerCase();
 
-      if (content === `!panel${botNum}` || content === '!panel') {
+      if (content === `!panel${botNum}` || (botNum === 1 && content === '!panel')) {
         const embed = new EmbedBuilder()
           .setColor(0x2B2D31)
-          .setTitle(`• Sudanship • Music`)
+          .setTitle(`• Sudanship • Music [Bot ${botNum}]`)
           .setDescription(`• مرحباً بك يا عضو Sudanship\n• اكتب اسم أو رابط الأغنية\n• أو اضغط زر المنصة اللي تبيها من تحت`)
           .setFooter({ text: `Sudanship • Music Dashboard` });
 
         const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId(`yt_btn_${botNum}`).setStyle(ButtonStyle.Secondary).setEmoji('▶️').setLabel('YouTube'),
-          new ButtonBuilder().setCustomId(`spotify_btn_${botNum}`).setStyle(ButtonStyle.Secondary).setEmoji('🟢').setLabel('Spotify'),
-          new ButtonBuilder().setCustomId(`sc_btn_${botNum}`).setStyle(ButtonStyle.Secondary).setEmoji('🟠').setLabel('SoundCloud'),
+          new ButtonBuilder().setCustomId(`yt_modal_${botNum}`).setStyle(ButtonStyle.Secondary).setEmoji('▶️').setLabel('YouTube'),
+          new ButtonBuilder().setCustomId(`spotify_modal_${botNum}`).setStyle(ButtonStyle.Secondary).setEmoji('🟢').setLabel('Spotify'),
+          new ButtonBuilder().setCustomId(`sc_modal_${botNum}`).setStyle(ButtonStyle.Secondary).setEmoji('🟠').setLabel('SoundCloud'),
           new ButtonBuilder().setCustomId(`fav_btn_${botNum}`).setStyle(ButtonStyle.Secondary).setEmoji('🤍')
         );
 
@@ -107,11 +93,10 @@ botsData.forEach((botInfo, index) => {
       }
     });
 
-    // التفاعل مع الأزرار وفتح نافذة البحث
     client.on(Events.InteractionCreate, async (interaction) => {
       try {
         if (interaction.isButton()) {
-          if (['yt_btn_', 'spotify_btn_', 'sc_btn_'].some(id => interaction.customId.startsWith(id))) {
+          if (['yt_modal_', 'spotify_modal_', 'sc_modal_'].some(id => interaction.customId.startsWith(id))) {
             const modal = new ModalBuilder()
               .setCustomId(`search_modal_${botNum}`)
               .setTitle(`Sudanship - محرك البحث الذكي`);
@@ -133,15 +118,18 @@ botsData.forEach((botInfo, index) => {
 
           if (interaction.customId === `stop_btn_${botNum}`) {
             player.stop();
-            return await interaction.reply({ content: '⏹️ تم إيقاف الموسيقى.', ephemeral: true });
+            try {
+              const channel = await client.channels.fetch(botInfo.channelId);
+              if (channel) connectToVoice(channel, false);
+            } catch (e) {}
+            return await interaction.reply({ content: '⏹️ تم إيقاف الموسيقى وإعادة البوت لوضعه الثابت.', ephemeral: true });
           }
         }
 
-        // جلب الأغنية وبث الصوت الحقيقي في الفويس مع إظهار لوحة Now Playing
         if (interaction.isModalSubmit()) {
           if (interaction.customId === `search_modal_${botNum}`) {
             const query = interaction.fields.getTextInputValue('song_query');
-            await interaction.reply({ content: `🔍 جاري البحث وبث الصوت في الروم لـ: **${query}**...`, ephemeral: true });
+            await interaction.reply({ content: `🔍 جاري جلب الأغنية وبث الصوت في الفويس لـ: **${query}**...`, ephemeral: true });
 
             let searchResults = await play.search(query, { limit: 1 });
             if (!searchResults || searchResults.length === 0) {
@@ -149,11 +137,21 @@ botsData.forEach((botInfo, index) => {
             }
 
             let song = searchResults[0];
-            
-            // جلب تدفق الصوت الحقيقي من الرابط وبثه عبر ديسكورد فويس
+
+            // فك الصمت وفعل الاتصال فور بدء تشغيل الصوت
+            try {
+              const channel = await client.channels.fetch(botInfo.channelId);
+              if (channel) connectToVoice(channel, true);
+            } catch (e) {}
+
+            // جلب الستريم الحقيقي بصيغة تدعم الصوت بوضوح
             let stream = await play.stream(song.url);
-            let resource = createAudioResource(stream.stream, { inputType: stream.type });
-            
+            let resource = createAudioResource(stream.stream, { 
+              inputType: stream.type,
+              inlineVolume: true 
+            });
+            resource.volume.setVolume(0.8); // ضبط مستوى الصوت 80%
+
             player.play(resource);
 
             const playingEmbed = new EmbedBuilder()
@@ -164,9 +162,6 @@ botsData.forEach((botInfo, index) => {
               .setFooter({ text: `Playing by: @${interaction.user.tag}` });
 
             const controlRow = new ActionRowBuilder().addComponents(
-              new ButtonBuilder().setCustomId(`prev_${botNum}`).setStyle(ButtonStyle.Secondary).setEmoji('⏮️'),
-              new ButtonBuilder().setCustomId(`pause_${botNum}`).setStyle(ButtonStyle.Success).setEmoji('▶️'),
-              new ButtonBuilder().setCustomId(`next_${botNum}`).setStyle(ButtonStyle.Secondary).setEmoji('⏭️'),
               new ButtonBuilder().setCustomId(`stop_btn_${botNum}`).setStyle(ButtonStyle.Danger).setEmoji('⏹️'),
               new ButtonBuilder().setCustomId(`fav_btn_${botNum}`).setStyle(ButtonStyle.Secondary).setEmoji('🤍')
             );
@@ -175,7 +170,7 @@ botsData.forEach((botInfo, index) => {
           }
         }
       } catch (err) {
-        console.error(err);
+        console.error("Interaction error:", err);
       }
     });
 
