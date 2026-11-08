@@ -1,7 +1,6 @@
 import subprocess
 import sys
 
-# تثبيت المكتبات تلقائياً لو حدث أي نقص في السيرفر
 for package in ['discord.py[voice]', 'PyNaCl', 'yt-dlp']:
     try:
         __import__(package.split('[')[0].replace('-', '_'))
@@ -13,7 +12,6 @@ import discord
 from discord.ext import commands
 import yt_dlp
 
-# بيانات الـ 5 بوتات الخاصة بك
 bots_data = [
     {"token": "MTU2ODEwOTAx" + "ODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc", "channel_id": 1529477320010895370, "status": "Sudanship Music 24/7"},
     {"token": "MTU2ODEwODEw" + "MTk0MzU2NjM5Ng" + ".GXrc1L" + ".jcB4CQ0W5keXl2xYmGjgUKqgpHfR4oKlXqRnAA", "channel_id": 1530676107408445450, "status": "Sudanship Vibes"},
@@ -22,9 +20,18 @@ bots_data = [
     {"token": "MTU2ODEwNTc5" + "MTY0OTc0MjkxOQ" + ".GRlWpY" + ".MNjtMD8bVVND4cQ24mwhPIX6SU-3BPwF7KnflE", "channel_id": 1539695465568796672, "status": "Sudanship Stream"}
 ]
 
-YDL_OPTIONS = {'format': 'bestaudio/best', 'noplaylist': 'True'}
+# إعدادات متقدمة جداً لضمان جلب واستخراج الصوت بدون أخطاء
+YDL_OPTIONS = {
+    'format': 'bestaudio/best',
+    'noplaylist': True,
+    'skip_download': True,
+    'cookiefile': None,
+    'default_search': 'ytsearch',
+    'source_address': '0.0.0.0'
+}
+
 FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -nostdin',
     'options': '-vn'
 }
 
@@ -63,9 +70,15 @@ class SongSelectView(discord.ui.View):
             if vc.is_playing():
                 vc.stop()
 
+            # استخراج الرابط المباشر الصافي للصوت
             with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
                 info = ydl.extract_info(url, download=False)
+                if 'entries' in info:
+                    info = info['entries'][0]
                 audio_url = info.get('url')
+
+            if not audio_url:
+                return await interaction.followup.send("❌ تعذر جلب رابط الصوت المباشر.", ephemeral=True)
 
             audio_source = discord.FFmpegPCMAudio(audio_url, **FFMPEG_OPTIONS)
             vc.play(audio_source)
@@ -76,17 +89,17 @@ class SongSelectView(discord.ui.View):
                 color=0x2B2D31
             )
             await interaction.channel.send(embed=embed)
-            await interaction.followup.send(f"🎵 جاري تشغيل: **{title}** في الفويس بنجاح!", ephemeral=True)
+            await interaction.followup.send(f"🎵 تم تشغيل: **{title}** في الفويس بنجاح!", ephemeral=True)
 
         except Exception as e:
             print(f"Playback error: {e}")
-            await interaction.followup.send("❌ عذراً، حدث خطأ أثناء جلب أو تشغيل الصوت.", ephemeral=True)
+            await interaction.followup.send("❌ حدث خطأ أثناء تشغيل الصوت في الفويس.", ephemeral=True)
 
 
 class SearchModal(discord.ui.Modal, title="محرك Sudanship الذكي"):
     query_input = discord.ui.TextInput(
         label="اكتب اسم القرآن، الأناشيد، أو الأغاني",
-        placeholder="مثال: سورة البقرة، ماهر المعيقلي، رامي صبري...",
+        placeholder="مثال: سورة البقرة، صولجا، رامي صبري...",
         style=discord.TextStyle.short,
         required=True
     )
@@ -101,12 +114,12 @@ class SearchModal(discord.ui.Modal, title="محرك Sudanship الذكي"):
 
         try:
             search_query = f"ytsearch5:{query}"
-            with yt_dlp.YoutubeDL({'format': 'bestaudio', 'extract_flat': True, 'quiet': True}) as ydl:
+            with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
                 info = ydl.extract_info(search_query, download=False)
                 tracks = info.get('entries', [])
 
             if not tracks:
-                return await interaction.followup.send("❌ لم يتم العثور على نتائج، جرب كتابة اسم أصح.", ephemeral=True)
+                return await interaction.followup.send("❌ لم يتم العثور على نتائج.", ephemeral=True)
 
             view = SongSelectView(tracks, self.bot_num)
             embed = discord.Embed(
@@ -118,7 +131,7 @@ class SearchModal(discord.ui.Modal, title="محرك Sudanship الذكي"):
 
         except Exception as e:
             print(f"Search error: {e}")
-            await interaction.followup.send("❌ حدث خطأ أثناء البحث.", ephemeral=True)
+            await interaction.followup.send("❌ حدث خطأ أثناء عملية البحث.", ephemeral=True)
 
 
 class MusicControlView(discord.ui.View):
