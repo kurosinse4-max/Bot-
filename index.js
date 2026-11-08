@@ -88,12 +88,12 @@ botsData.forEach((botInfo, index) => {
 
         const embed = new EmbedBuilder()
           .setColor(0x2B2D31)
-          .setTitle(`• Sudanship • Soundcloud Dashboard [Bot ${botNum}]`)
-          .setDescription(`• مرحباً بك يا عضو Sudanship\n• انقر على زر **محرك بحث SoundCloud** (قرآن، أناشيد، أغاني):`)
-          .setFooter({ text: `Sudanship • SoundCloud Engine (Auto-Refresh)` });
+          .setTitle(`• Sudanship • Smart Audio Dashboard [Bot ${botNum}]`)
+          .setDescription(`• مرحباً بك يا عضو Sudanship\n• انقر على زر **محرك البحث الذكي** (يدعم الأغاني، القرآن، الأناشيد، والروابط):`)
+          .setFooter({ text: `Sudanship • Smart Engine (Auto-Refresh)` });
 
         const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId(`search_modal_btn_${botNum}`).setStyle(ButtonStyle.Primary).setEmoji('🔍').setLabel('بحث SoundCloud'),
+          new ButtonBuilder().setCustomId(`search_modal_btn_${botNum}`).setStyle(ButtonStyle.Primary).setEmoji('🔍').setLabel('محرك البحث الذكي'),
           new ButtonBuilder().setCustomId(`stop_btn_${botNum}`).setStyle(ButtonStyle.Danger).setEmoji('⏹️').setLabel('إيقاف')
         );
 
@@ -116,13 +116,13 @@ botsData.forEach((botInfo, index) => {
           if (interaction.customId === `search_modal_btn_${botNum}`) {
             const modal = new ModalBuilder()
               .setCustomId(`search_input_modal_${botNum}`)
-              .setTitle(`محرك بحث SoundCloud`);
+              .setTitle(`محرك البحث الذكي الشامل`);
 
             const songInput = new TextInputBuilder()
               .setCustomId('query_text')
-              .setLabel('اكتب ما تريد البحث عنه في ساوندكلاود')
+              .setLabel('اكتب اسم أو حط رابط (يوتيوب، ساوندكلاود...)')
               .setStyle(TextInputStyle.Short)
-              .setPlaceholder('مثال: قرآن، أناشيد، أغاني...')
+              .setPlaceholder('مثال: سورة البقرة، صولجا، أو رابط...')
               .setRequired(true);
 
             modal.addComponents(new ActionRowBuilder().addComponents(songInput));
@@ -144,33 +144,36 @@ botsData.forEach((botInfo, index) => {
             await interaction.deferReply({ ephemeral: true });
             const query = interaction.fields.getTextInputValue('query_text');
 
-            let searchResults;
+            let searchResults = [];
             try {
-              // البحث عبر ساوندكلاود مباشرة لتجاوز الحظر
-              searchResults = await play.search(query, { source: { soundcloud: "tracks" }, limit: 10 });
+              // محرك ذكي بيبحث في يوتيوب وساوندكلاود معاً لضمان جلب النتائج دائماً
+              let ytResults = await play.search(query, { limit: 5 }).catch(() => []);
+              let scResults = await play.search(query, { source: { soundcloud: "tracks" }, limit: 5 }).catch(() => []);
+              
+              searchResults = [...ytResults, ...scResults];
             } catch (e) {
-              console.error("SoundCloud Search error:", e);
+              console.error("Smart Search error:", e);
             }
 
             if (!searchResults || searchResults.length === 0) {
-              return interaction.editReply({ content: '❌ لم يتم العثور على نتائج في ساوندكلاود. جرب كتابة كلمات أخرى.' });
+              return interaction.editReply({ content: '❌ لم يتم العثور على نتائج مطابقة. جرب كتابة اسم أصح أو لصق رابط مباشر.' });
             }
 
             const embed = new EmbedBuilder()
               .setColor(0x2B2D31)
-              .setTitle(`SoundCloud Results for: ${query}`)
-              .setDescription(searchResults.map((song, i) => `${i + 1}. **${song.title}** - By ${song.user?.name || 'Unknown'}`).join('\n'))
+              .setTitle(`Smart Results for: ${query}`)
+              .setDescription(searchResults.map((song, i) => `${i + 1}. **${song.title}** - By ${song.channel?.name || song.user?.name || 'Unknown'}`).join('\n'))
               .setFooter({ text: `حدد مقطوعة للتشغيل من القائمة أدناه` });
 
             const options = searchResults.map((song, i) => ({
               label: song.title.substring(0, 99),
-              description: `By ${song.user?.name || 'Unknown'} (${song.durationInSec ? Math.floor(song.durationInSec/60)+':'+(song.durationInSec%60<10?'0':''):''}min)`.substring(0, 99),
+              description: `By ${song.channel?.name || song.user?.name || 'Unknown'}`.substring(0, 99),
               value: `play_idx_${i}_${botNum}`
             }));
 
             const selectMenu = new StringSelectMenuBuilder()
               .setCustomId(`select_song_menu_${botNum}`)
-              .setPlaceholder('حدد ما تريد تشغيله من ساوندكلاود...')
+              .setPlaceholder('حدد ما تريد تشغيله...')
               .addOptions(options);
 
             const row = new ActionRowBuilder().addComponents(selectMenu);
@@ -190,7 +193,7 @@ botsData.forEach((botInfo, index) => {
               return interaction.reply({ content: '❌ انتهت صلاحية البحث، يرجى البحث مرة أخرى.', ephemeral: true });
             }
 
-            await interaction.update({ content: `🎵 جاري تشغيل: **${song.title}** من SoundCloud وبث الصوت في الفويس...`, embeds: [], components: [] });
+            await interaction.update({ content: `🎵 جاري تشغيل: **${song.title}** وبث الصوت في الفويس...`, embeds: [], components: [] });
 
             try {
               const channel = await client.channels.fetch(botInfo.channelId);
@@ -198,7 +201,7 @@ botsData.forEach((botInfo, index) => {
             } catch (e) {}
 
             try {
-              let streamData = await play.stream_from_info(song.url) || await play.stream(song.url);
+              let streamData = await play.stream(song.url);
               let resource = createAudioResource(streamData.stream, { 
                 inputType: streamData.type,
                 inlineVolume: true 
@@ -206,15 +209,22 @@ botsData.forEach((botInfo, index) => {
               resource.volume.setVolume(1.0);
               player.play(resource);
             } catch (streamErr) {
-              console.error("SoundCloud Stream playback error:", streamErr);
-              return interaction.channel.send({ content: `❌ حدث خطأ أثناء تشغيل المقطع من ساوندكلاود.` });
+              try {
+                // محاولة بديلة لو حصل خطأ في الدفق
+                let scStream = await play.stream_from_info(song.url);
+                let resource = createAudioResource(scStream.stream, { inputType: scStream.type, inlineVolume: true });
+                resource.volume.setVolume(1.0);
+                player.play(resource);
+              } catch (err2) {
+                return interaction.channel.send({ content: `❌ عذراً، تعذر تشغيل هذا المقطع نظراً لحماية المصدر.` });
+              }
             }
 
             const playingEmbed = new EmbedBuilder()
               .setColor(0x2B2D31)
-              .setTitle(`▶️ • يُشغّل الآن في الفويس (SoundCloud)`)
-              .setDescription(`**[${song.title}](${song.url})**\n\n🎙️ **المنشئ:** ${song.user?.name || 'Sudanship'}\n\n🔊 **مستوى الصوت:** 100%`)
-              .setImage(song.thumbnail || 'https://i.imgur.com/3g7X7Q8.png')
+              .setTitle(`▶️ • يُشغّل الآن في الفويس`)
+              .setDescription(`**[${song.title}](${song.url})**\n\n🎙️ **المصدر:** ${song.channel?.name || song.user?.name || 'Sudanship'}\n\n🔊 **مستوى الصوت:** 100%`)
+              .setImage(song.thumbnails?.[0]?.url || song.thumbnail || 'https://i.imgur.com/3g7X7Q8.png')
               .setFooter({ text: `Playing by: @${interaction.user.tag}` });
 
             const controlRow = new ActionRowBuilder().addComponents(
