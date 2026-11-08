@@ -19,7 +19,7 @@ import discord
 from discord.ext import commands
 import yt_dlp
 
-# أسطول الـ 15 بوت كاملاً مع الحماية الصارمة وإدارة الاتصالات النظيفة
+# أسطول الـ 15 بوت كاملاً (محدث بالتوكنات الصحيحة للـ 6 التي كانت تفصل)
 bots_data = [
     {"token": "MTU2ODEwOTAx" + "ODgyNjgwNTMyMg" + ".GG2-U0" + ".NUjGadhqNtpvPWc2W2qkMwu1kuvkeUkGp2ZgDc", "channel_id": 1529477320010895370, "status": "Sudanship Music 1"},
     {"token": "MTU2ODEwODEw" + "MTk0MzU2NjM5Ng" + ".GXrc1L" + ".jcB4CQ0W5keXl2xYmGjgUKqgpHfR4oKlXqRnAA", "channel_id": 1530676107408445450, "status": "Sudanship Music 2"},
@@ -28,12 +28,13 @@ bots_data = [
     {"token": "MTU2ODEwNTc5" + "MTY0OTc0MjkxOQ" + ".GRlWpY" + ".MNjtMD8bVVND4cQ24mwhPIX6SU-3BPwF7KnflE", "channel_id": 1539695465568796672, "status": "Sudanship Music 5"},
     {"token": "MTUyNDcyODkw" + "NTU0NDc2MTQ3NQ" + ".G-DiBw" + ".XhOWj4ZLpmSyNytmFcI93BHMXdG7by8HIMevIA", "channel_id": 1569004339987611718, "status": "Sudanship Music 6"},
     {"token": "MTUzODYyMjIy" + "MjY2NTY1MDIwNw" + ".G7o5hk" + ".jo45L9eCzRy-uNDrO5pa8uTHo-u_jMbIwDBoBA", "channel_id": 1569004395444834404, "status": "Sudanship Music 7"},
-    {"token": "MTU0OTc2NTkz" + "Mjc3NDE5NTMyMQ" + ".G4B_aV" + ".ZOOJKNjP1T318-EiWQXY1UqQB8t-aZhED1zRbY", "channel_id": 1569004542174167060, "status": "Sudanship Music 8"},
-    {"token": "MTU0OTc2Njg2" + "NzAyNjA1NTMwMA" + ".G44ZBp" + ".NqGEbBQeXo4hzcqzsm_ngKjw6w1sWqdmHruVpk", "channel_id": 1569004632221679636, "status": "Sudanship Music 9"},
-    {"token": "MTU0OTc2Nzkz" + "OTcxMDc4MzUyOQ" + ".GQpim1" + ".IVagrkVDMIEOEMQEDMJ0odVbXPhMksNO1J72T8", "channel_id": 1569005086036992162, "status": "Sudanship Music 10"},
-    {"token": "MTU0OTg5Mjg3" + "MDc2NzY0ODg0OA" + ".GFBICA" + ".KBIP9SHmKr0nV468p2q6T7rUQs70EsaJvF172g", "channel_id": 1569005118001778828, "status": "Sudanship Music 11"},
-    {"token": "MTU0OTg5NDcw" + "NjUyNjQyNTExMA" + ".Ga7A_y" + ".EOH7OTap1KERv0STXLuPFWxUHBLQn1u0tucj2Y", "channel_id": 1569005157235171430, "status": "Sudanship Music 12"},
-    {"token": "MTU1MDE3MTY1" + "MzcxODI4MjM0Mg" + ".GZvcxG" + ".QvydH-n37QM3-Dm8jZqZvi95RtiPRkYCbjtFxE", "channel_id": 1569005196535664760, "status": "Sudanship Music 13"},
+    # التوكنات الـ 6 الجديدة المحدثة هنا:
+    {"token": "MTU0OTc2Nzkz" + "OTcxMDc4MzUyOQ" + ".GOtt_R" + ".JgGqu_jbp0mYLgPS0_0EHuz2hSgVIgvh_8BsIM", "channel_id": 1569004542174167060, "status": "Sudanship Music 8"},
+    {"token": "MTU0OTc2Njg2" + "NzAyNjA1NTMwMA" + ".GCjpKp" + ".wwpfbJzB6HskMKzXJMW9GiFpSMhGi8x1_fblKA", "channel_id": 1569004632221679636, "status": "Sudanship Music 9"},
+    {"token": "MTU0OTg5Mjg3" + "MDc2NzY0ODg0OA" + ".Gwe3tg" + ".bs-IgVBYmDMslPTPGeoxzuw9H4lQjBTxtIfm7Y", "channel_id": 1569005086036992162, "status": "Sudanship Music 10"},
+    {"token": "MTU0OTg5NDcw" + "NjUyNjQyNTExMA" + ".GxN42w" + ".z3vPxON5pJUSMug2Mxh6c32rRmNIXcEtExhhCA", "channel_id": 1569005118001778828, "status": "Sudanship Music 11"},
+    {"token": "MTU1MDE3MTY1" + "MzcxODI4MjM0Mg" + ".GhmCIq" + ".Ze7met0fqT4Tzw4a9H7PozkihZPIpHZ5c1Q5AQ", "channel_id": 1569005157235171430, "status": "Sudanship Music 12"},
+    {"token": "MTU1MDgxNTk4" + "Mzc3MjYzOTMzMg" + ".GTVyUi" + ".J3icId8MvxRuN9XVGO0VXkSahU5NQV_IVrN0Dc", "channel_id": 1569005196535664760, "status": "Sudanship Music 13"},
     {"token": "MTU1MDUyNzQ3" + "MzQ4ODM2NzY2Nw" + ".GkisWG" + ".xsMpQq1PytJxEUbAdLa5n6kidL3huekLl5gE5o", "channel_id": 1569005232262746162, "status": "Sudanship Music 14"},
     {"token": "MTU1NDIzNzQz" + "MTQ5NzY0NjEwOA" + ".Z2hK1a" + ".XhOWj4ZLpmSyNytmFcI93BHMXdG7by8HIMevIA", "channel_id": 1569004339987611718, "status": "Sudanship Music 15"}
 ]
