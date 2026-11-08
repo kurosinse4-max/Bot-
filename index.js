@@ -34,16 +34,15 @@ botsData.forEach((botInfo, index) => {
           channelId: channel.id,
           guildId: channel.guild.id,
           adapterCreator: channel.guild.voiceAdapterCreator,
-          selfDeaf: !isPlaying,
+          selfDeaf: !isPlaying, // صامت وثابت افتراضياً، ويفك الديفن لحظة التشغيل
           selfMute: false,
           group: `sudanship_${botNum}`
         });
         currentConnection.subscribe(player);
-      } catch (err) {
-        console.error(`Voice error on bot ${botNum}:`, err);
-      }
+      } catch (err) {}
     };
 
+    // عند انتهاء الأغنية، يرجع البوت لوضع الصمت والثبات تلقائياً
     player.on(AudioPlayerStatus.Idle, async () => {
       try {
         const channel = await client.channels.fetch(botInfo.channelId);
@@ -79,6 +78,7 @@ botsData.forEach((botInfo, index) => {
       }
     });
 
+    // إرسال اللوحة وتحديثها تلقائياً كل 3 دقائق
     client.on(Events.MessageCreate, async (message) => {
       if (message.author.bot) return;
       const content = message.content.trim().toLowerCase();
@@ -91,8 +91,8 @@ botsData.forEach((botInfo, index) => {
         const embed = new EmbedBuilder()
           .setColor(0x2B2D31)
           .setTitle(`• Sudanship • Music Dashboard [Bot ${botNum}]`)
-          .setDescription(`• مرحباً بك يا عضو Sudanship\n• انقر على زر **محرك بحث Sudanship** أدناه لاختيار الأغنية وتشغيلها فوراً:`)
-          .setFooter({ text: `Sudanship • Professional Music System (Auto-Refreshes)` });
+          .setDescription(`• مرحباً بك يا عضو Sudanship\n• انقر على زر **محرك بحث Sudanship** لاختيار وتشغيل الأغنية فوراً:`)
+          .setFooter({ text: `Sudanship • Professional System (Auto-Refresh)` });
 
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId(`search_modal_btn_${botNum}`).setStyle(ButtonStyle.Primary).setEmoji('🔍').setLabel('محرك بحث Sudanship'),
@@ -193,13 +193,12 @@ botsData.forEach((botInfo, index) => {
               if (channel) connectToVoice(channel, true);
             } catch (e) {}
 
-            // جلب تدفق الصوت الحقيقي عبر play-dl مع تمرير خيارات البث الواضحة
             let stream = await play.stream(song.url);
             let resource = createAudioResource(stream.stream, { 
               inputType: stream.type,
               inlineVolume: true 
             });
-            resource.volume.setVolume(1.0); // ضبط الصوت 100%
+            resource.volume.setVolume(1.0);
 
             player.play(resource);
 
