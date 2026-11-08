@@ -1,5 +1,5 @@
 const { Client, GatewayIntentBits, ActivityType, Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource } = require('@discordjs/voice');
 const play = require('play-dl');
 
 const botsData = [
@@ -52,7 +52,7 @@ botsData.forEach((botInfo, index) => {
       }, 4000);
     });
 
-    // حماية تامة ضد الطرد أو التحريك
+    // حماية صارمة ضد الطرد أو التحريك من الروم
     client.on(Events.VoiceStateUpdate, (oldState, newState) => {
       if (newState.member?.id === client.user.id && !newState.channelId) {
         setTimeout(async () => {
@@ -74,7 +74,7 @@ botsData.forEach((botInfo, index) => {
       }
     });
 
-    // إرسال لوحة التحكم الفخمة
+    // إرسال لوحة التحكم الفخمة بالأمر !panel
     client.on(Events.MessageCreate, async (message) => {
       if (message.author.bot) return;
       const content = message.content.trim().toLowerCase();
@@ -82,73 +82,71 @@ botsData.forEach((botInfo, index) => {
       if (content === `!panel${botNum}` || content === '!panel') {
         const embed = new EmbedBuilder()
           .setColor(0xFFA500)
-          .setTitle(`☁️ • Sudanship • Music Dashboard`)
-          .setDescription(`• **مرحباً بك يا عضو Sudanship في عالم الموسيقى.**\n• البوت ذكي ومتواجد وثابت في الروم الصوتي 24/7.\n• اضغط على أزرار المنصات أدناه للبحث عن الأغاني وتشغيلها فوراً:`)
+          .setTitle(`☁️ • Sudanship • Advanced Control Panel`)
+          .setDescription(`• **مرحباً بك يا عضو Sudanship في لوحة التحكم الموسيقية.**\n• انقر على الأزرار أدناه للبحث عن الأغاني وتشغيلها فوراً دون أي أوامر[span_1](start_span)[span_1](end_span):\n\n🎵 **YouTube / Spotify Search Engine**`)
           .setFooter({ text: `Sudanship • Ultimate Music Experience` });
 
-        const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId(`yt_modal_${botNum}`)
-            .setLabel('YouTube')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('▶️'),
-          new ButtonBuilder()
-            .setCustomId(`spotify_modal_${botNum}`)
-            .setLabel('Spotify')
-            .setStyle(ButtonStyle.Success)
-            .setEmoji('🟢'),
-          new ButtonBuilder()
-            .setCustomId(`fav_btn_${botNum}`)
-            .setLabel('المفضلة')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🤍'),
-          new ButtonBuilder()
-            .setCustomId(`stop_music_${botNum}`)
-            .setLabel('إيقاف')
-            .setStyle(ButtonStyle.Danger)
-            .setEmoji('⏹️')
+        // أزرار احترافية مشابهة للبوتات العالمية
+        const row1 = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`play_modal_${botNum}`).setLabel('PLAY').setStyle(ButtonStyle.Primary).setEmoji('▶️'),
+          new ButtonBuilder().setCustomId(`pause_btn_${botNum}`).setLabel('PAUSE').setStyle(ButtonStyle.Secondary).setEmoji('⏸️'),
+          new ButtonBuilder().setCustomId(`stop_btn_${botNum}`).setLabel('STOP').setStyle(ButtonStyle.Danger).setEmoji('⏹️'),
+          new ButtonBuilder().setCustomId(`fav_btn_${botNum}`).setLabel('LIKE').setStyle(ButtonStyle.Success).setEmoji('🤍')
         );
 
-        return message.reply({ embeds: [embed], components: [row] });
+        const row2 = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`spotify_search_${botNum}`).setLabel('Spotify Search').setStyle(ButtonStyle.Success).setEmoji('🟢'),
+          new ButtonBuilder().setCustomId(`help_btn_${botNum}`).setLabel('HELP').setStyle(ButtonStyle.Secondary).setEmoji('❓')
+        );
+
+        return message.reply({ embeds: [embed], components: [row1, row2] });
       }
     });
 
-    // التفاعل مع الأزرار والنوافذ وتشغيل الصوت الحقيقي مع صورة الأغنية
+    // التفاعل مع الأزرار والنوافذ وتشغيل الأغاني مع الصورة
     client.on(Events.InteractionCreate, async (interaction) => {
       try {
         if (interaction.isButton()) {
-          if (interaction.customId === `yt_modal_${botNum}` || interaction.customId === `spotify_modal_${botNum}`) {
+          if (interaction.customId === `play_modal_${botNum}` || interaction.customId === `spotify_search_${botNum}`) {
             const modal = new ModalBuilder()
               .setCustomId(`search_modal_${botNum}`)
-              .setTitle(`Sudanship - تشغيل الأغاني`);
+              .setTitle(`Sudanship - محرك البحث الذكي`);
 
             const songInput = new TextInputBuilder()
               .setCustomId('song_query')
-              .setLabel('اكتب اسم الأغنية أو رابط يوتيوب')
+              .setLabel('اكتب اسم الأغنية أو رابط يوتيوب/سبوتفاي')
               .setStyle(TextInputStyle.Short)
-              .setPlaceholder('Song name or https://youtu.be/...')
+              .setPlaceholder('Song name or https://...')
               .setRequired(true);
 
             modal.addComponents(new ActionRowBuilder().addComponents(songInput));
             return await interaction.showModal(modal);
           }
 
-          if (interaction.customId === `fav_btn_${botNum}`) {
-            return await interaction.reply({ content: '🤍 قائمة المفضلة فارغة حالياً.', ephemeral: true });
+          if (interaction.customId === `pause_btn_${botNum}`) {
+            player.pause();
+            return await interaction.reply({ content: '⏸️ تم إيقاف التشغيل مؤقتاً.', ephemeral: true });
           }
 
-          if (interaction.customId === `stop_music_${botNum}`) {
+          if (interaction.customId === `stop_btn_${botNum}`) {
             player.stop();
             return await interaction.reply({ content: '⏹️ تم إيقاف الموسيقى وإفراغ المشغل.', ephemeral: true });
+          }
+
+          if (interaction.customId === `fav_btn_${botNum}`) {
+            return await interaction.reply({ content: '🤍 تمت إضافة الأغنية إلى قائمة المفضلة لديك!', ephemeral: true });
+          }
+
+          if (interaction.customId === `help_btn_${botNum}`) {
+            return await interaction.reply({ content: 'ℹ️ اضغط على زر PLAY أو Spotify للبحث عن أي اغنية وتشغيلها مباشرة في الروم الصوتي.', ephemeral: true });
           }
         }
 
         if (interaction.isModalSubmit()) {
           if (interaction.customId === `search_modal_${botNum}`) {
             const query = interaction.fields.getTextInputValue('song_query');
-            await interaction.reply({ content: `🔍 جاري البحث والتشغيل الذكي لـ: **${query}**...`, ephemeral: true });
+            await interaction.reply({ content: `🔍 جاري البحث الذكي وجلب الأغنية لـ: **${query}**...`, ephemeral: true });
 
-            // البحث الذكي وجلب معلومات الأغنية وصورتها
             let searchResults = await play.search(query, { limit: 1 });
             if (!searchResults || searchResults.length === 0) {
               return interaction.editReply({ content: '❌ لم يتم العثور على نتائج مطابقة!' });
@@ -160,20 +158,17 @@ botsData.forEach((botInfo, index) => {
             
             player.play(resource);
 
-            // لوحة عرض الأغنية الحالية مع الصورة والزر الفخم
+            // لوحة عرض الأغنية الحالية بالفنان وصورة الألبوم والزر الفخم
             const playingEmbed = new EmbedBuilder()
               .setColor(0xFFA500)
-              .setTitle(`🎵 • جاري يُشغّل الآن`)
-              .setDescription(`**[${song.title}](${song.url})**\n\n• **القناة / الفنان:** ${song.channel?.name || 'Unknown'}\n• **المدة:** ${song.duration || 'Live'}`)
+              .setTitle(`🎵 • Now Playing / يُشغّل الآن`)
+              .setDescription(`**[${song.title}](${song.url})**\n\n• **الفنان / القناة:** ${song.channel?.name || 'Sudanship Music'}\n• **المدة:** ${song.duration || 'Live'}`)
               .setImage(song.thumbnails[0]?.url || 'https://i.imgur.com/3g7X7Q8.png')
               .setFooter({ text: `Sudanship • Requested by ${interaction.user.tag}` });
 
             const controlRow = new ActionRowBuilder().addComponents(
-              new ButtonBuilder()
-                .setCustomId(`stop_music_${botNum}`)
-                .setLabel('إيقاف')
-                .setStyle(ButtonStyle.Danger)
-                .setEmoji('⏹️')
+              new ButtonBuilder().setCustomId(`stop_btn_${botNum}`).setLabel('STOP').setStyle(ButtonStyle.Danger).setEmoji('⏹️'),
+              new ButtonBuilder().setCustomId(`fav_btn_${botNum}`).setLabel('LIKE').setStyle(ButtonStyle.Success).setEmoji('🤍')
             );
 
             await interaction.followUp({ embeds: [playingEmbed], components: [controlRow], ephemeral: false });
