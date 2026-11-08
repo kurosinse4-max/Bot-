@@ -11,6 +11,6 @@
     "@discordjs/voice": "^0.17.0",
     "discord.js": "^14.14.1",
     "play-dl": "^1.9.7",
-    "ytdl-core": "github:distubejs/ytdl-core"
+    "ytdl-core": "^4.11.5"
   }
 }
