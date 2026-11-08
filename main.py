@@ -1,3 +1,13 @@
+import subprocess
+import sys
+
+# تثبيت المكتبات تلقائياً لو حدث أي نقص في السيرفر
+for package in ['discord.py[voice]', 'PyNaCl', 'yt-dlp']:
+    try:
+        __import__(package.split('[')[0].replace('-', '_'))
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
 import asyncio
 import discord
 from discord.ext import commands
@@ -12,7 +22,6 @@ bots_data = [
     {"token": "MTU2ODEwNTc5" + "MTY0OTc0MjkxOQ" + ".GRlWpY" + ".MNjtMD8bVVND4cQ24mwhPIX6SU-3BPwF7KnflE", "channel_id": 1539695465568796672, "status": "Sudanship Stream"}
 ]
 
-# إعدادات yt-dlp المتقدمة لتجاوز حظر السيرفرات السحابية
 YDL_OPTIONS = {'format': 'bestaudio/best', 'noplaylist': 'True'}
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
@@ -25,9 +34,8 @@ class SongSelectView(discord.ui.View):
         self.tracks = tracks
         self.bot_num = bot_num
         
-        # إضافة قائمة منسوجة بالنتائج
         options = []
-        for i, track in enumerate(tracks[:5]):  # عرض أول 5 نتائج
+        for i, track in enumerate(tracks[:5]):
             title = track.get('title', 'Unknown')[:99]
             options.append(discord.SelectOption(label=title, value=str(i)))
 
@@ -55,7 +63,6 @@ class SongSelectView(discord.ui.View):
             if vc.is_playing():
                 vc.stop()
 
-            # استخراج الرابط المباشر للصوت عبر yt-dlp
             with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
                 info = ydl.extract_info(url, download=False)
                 audio_url = info.get('url')
@@ -93,7 +100,6 @@ class SearchModal(discord.ui.Modal, title="محرك Sudanship الذكي"):
         query = self.query_input.value
 
         try:
-            # البحث الذكي في يوتيوب وساوندكلاود
             search_query = f"ytsearch5:{query}"
             with yt_dlp.YoutubeDL({'format': 'bestaudio', 'extract_flat': True, 'quiet': True}) as ydl:
                 info = ydl.extract_info(search_query, download=False)
@@ -152,7 +158,6 @@ async def run_bot(bot_info, bot_num):
             if channel and isinstance(channel, discord.VoiceChannel):
                 if not channel.guild.voice_client:
                     await channel.connect(self_deaf=True)
-            print(f"Bot {bot_num} auto-connected to voice channel.")
         except Exception as e:
             print(f"Auto join error for bot {bot_num}: {e}")
 
